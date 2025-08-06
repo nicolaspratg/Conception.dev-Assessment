@@ -1,5 +1,6 @@
 <script lang="ts">
   import Diagram from '$lib/Diagram.svelte';
+  import PromptForm from '$lib/PromptForm.svelte';
 </script>
 
 <svelte:head>
@@ -12,7 +13,10 @@
     <p class="text-gray-600 mt-1">Visual Mock-up Generator - Conception.dev Assessment</p>
   </header>
   
-  <main class="flex-1">
-    <Diagram />
+  <main class="flex-1 overflow-auto">
+    <div class="max-w-4xl mx-auto p-6">
+      <PromptForm />
+      <Diagram />
+    </div>
   </main>
 </div> 

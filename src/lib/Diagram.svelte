@@ -1,31 +1,10 @@
 <script lang="ts">
   import { SHAPES, type ShapeType } from './diagram/constants.js';
-  import diagramData from './diagram/example-diagram.json';
+  import { diagramStore } from './stores/diagramStore.js';
+  import type { DiagramData, Node } from './types/diagram.js';
 
-  interface Node {
-    id: string;
-    type: ShapeType;
-    label: string;
-    x: number;
-    y: number;
-    width?: number;
-    height?: number;
-    radius?: number;
-  }
-
-  interface Edge {
-    id: string;
-    source: string;
-    target: string;
-    label: string;
-  }
-
-  interface DiagramData {
-    nodes: Node[];
-    edges: Edge[];
-  }
-
-  const data: DiagramData = diagramData;
+  $: data = $diagramStore;
+  $: lastUpdated = new Date().toLocaleTimeString();
 
   function getNodeById(id: string): Node | undefined {
     return data.nodes.find(node => node.id === id);
@@ -43,6 +22,9 @@
 </script>
 
 <div class="w-full h-full bg-gray-50 p-4">
+  <div class="text-xs text-gray-500 mb-2">
+    Last updated: {lastUpdated}
+  </div>
   <svg class="w-full h-full" viewBox="0 0 600 400">
     <!-- Render edges first (so they appear behind nodes) -->
     {#each data.edges as edge}
