@@ -1,0 +1,59 @@
+{
+  "nodes": [
+    {
+      "id": "1",
+      "type": "component",
+      "label": "Web Client (SvelteKit)",
+      "x": 100,
+      "y": 100,
+      "width": 200,
+      "height": 120
+    },
+    {
+      "id": "2",
+      "type": "external",
+      "label": "OpenAI API",
+      "x": 400,
+      "y": 100,
+      "radius": 60
+    },
+    {
+      "id": "3",
+      "type": "datastore",
+      "label": "PostgreSQL",
+      "x": 400,
+      "y": 300,
+      "width": 120,
+      "height": 80
+    },
+    {
+      "id": "4",
+      "type": "component",
+      "label": "Edge Function",
+      "x": 250,
+      "y": 250,
+      "width": 150,
+      "height": 80
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "source": "1",
+      "target": "2",
+      "label": "API call"
+    },
+    {
+      "id": "e2",
+      "source": "1",
+      "target": "4",
+      "label": "fetch"
+    },
+    {
+      "id": "e3",
+      "source": "4",
+      "target": "3",
+      "label": "query"
+    }
+  ]
+} 
