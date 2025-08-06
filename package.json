@@ -23,6 +23,7 @@
 		"@tailwindcss/typography": "^0.5.16",
 		"@testing-library/jest-dom": "^6.6.4",
 		"@testing-library/svelte": "^5.2.8",
+		"@types/node": "^24.2.0",
 		"autoprefixer": "^10.4.21",
 		"jsdom": "^26.1.0",
 		"postcss": "^8.5.6",

@@ -1,6 +1,12 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { z } from 'zod';
+import { OPENAI_API_KEY } from '$env/static/private';
+
+// Simple rate limiting (in production, use Redis or similar)
+const requestCounts = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT = 2; // requests per minute
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
 
 // Zod schema for diagram validation
 const NodeSchema = z.object({
@@ -26,7 +32,7 @@ const DiagramSchema = z.object({
   edges: z.array(EdgeSchema),
 });
 
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   try {
     const { prompt } = await request.json();
     
@@ -34,9 +40,24 @@ export const POST: RequestHandler = async ({ request }) => {
       return json({ error: 'Invalid prompt' }, { status: 400 });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    if (!OPENAI_API_KEY) {
       return json({ error: 'OpenAI API key not configured' }, { status: 500 });
+    }
+
+    // Rate limiting
+    const clientId = getClientAddress();
+    const now = Date.now();
+    const clientData = requestCounts.get(clientId);
+    
+    if (clientData && now < clientData.resetTime) {
+      if (clientData.count >= RATE_LIMIT) {
+        return json({ 
+          error: 'Rate limit exceeded. Please wait a minute before trying again.' 
+        }, { status: 429 });
+      }
+      clientData.count++;
+    } else {
+      requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
     }
 
     const systemPrompt = `You are a UI-schema generator that creates architecture diagrams. 
@@ -76,7 +97,7 @@ Rules:
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
@@ -85,14 +106,21 @@ Rules:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 500,
       }),
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status, response.statusText);
-      return json({ error: 'Failed to generate diagram' }, { status: 502 });
+      const errorText = await response.text();
+      console.error('OpenAI API error:', response.status, response.statusText, errorText);
+      
+      if (response.status === 429) {
+        return json({ 
+          error: 'OpenAI rate limit exceeded. Please wait a few minutes and try again.' 
+        }, { status: 429 });
+      }
+      
+      return json({ error: `Failed to generate diagram: ${response.status} ${response.statusText}` }, { status: 502 });
     }
 
     const data = await response.json();

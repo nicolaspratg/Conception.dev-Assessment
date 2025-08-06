@@ -4,11 +4,21 @@
   let prompt = '';
   let isGenerating = false;
   let error = '';
+  let submitTimeout: number | null = null;
 
   async function handleSubmit() {
     if (!prompt.trim()) {
       error = 'Please enter a prompt';
       return;
+    }
+
+    // Debounce to prevent multiple calls on hot-reload
+    if (submitTimeout) {
+      clearTimeout(submitTimeout);
+    }
+
+    if (isGenerating) {
+      return; // Prevent multiple simultaneous requests
     }
 
     isGenerating = true;
@@ -55,7 +65,7 @@
         placeholder="e.g., 'A web app with a React frontend, Node.js API, and PostgreSQL database'"
         class="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         disabled={isGenerating}
-      />
+      ></textarea>
     </div>
 
     {#if error}
