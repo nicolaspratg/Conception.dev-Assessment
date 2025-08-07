@@ -4,6 +4,7 @@
 	import PromptBar from '$lib/PromptBar.svelte';
 	import { onMount } from 'svelte';
 
+
 	let { children } = $props();
 	
 	let isDark = $state(false);
@@ -32,9 +33,10 @@
 		</h1>
 		<button 
 			onclick={toggleDarkMode}
-			class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+			class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+			aria-label="Toggle dark mode"
 		>
-			{isDark ? 'Light' : 'Dark'} Mode
+			{isDark ? '☀️' : '🌙'}
 		</button>
 	</header>
 

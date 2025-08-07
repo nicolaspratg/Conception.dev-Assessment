@@ -7,6 +7,11 @@ test('prompt flow smoke test - light mode', async ({ page }) => {
   // Wait for the page to load
   await expect(page.locator('h1')).toContainText('Conception.dev Mock-up Generator');
   
+  // Verify dark mode toggle button has moon icon
+  const darkModeButton = page.locator('button[aria-label="Toggle dark mode"]');
+  await expect(darkModeButton).toBeVisible();
+  await expect(darkModeButton).toContainText('🌙');
+  
   // Verify the prompt bar is present
   const textarea = page.locator('textarea');
   await expect(textarea).toBeVisible();
@@ -32,6 +37,14 @@ test('prompt flow smoke test - dark mode', async ({ page }) => {
   
   // Wait for the page to load
   await expect(page.locator('h1')).toContainText('Conception.dev Mock-up Generator');
+  
+  // Verify dark mode is applied to document
+  await expect(page.locator('html')).toHaveClass(/dark/);
+  
+  // Verify dark mode toggle button has sun icon
+  const darkModeButton = page.locator('button[aria-label="Toggle dark mode"]');
+  await expect(darkModeButton).toBeVisible();
+  await expect(darkModeButton).toContainText('☀️');
   
   // Verify dark mode is applied to diagram container
   const diagramContainer = page.locator('main .bg-white.dark\\:bg-\\[\\#343541\\]');

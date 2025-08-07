@@ -76,18 +76,18 @@
           y={node.y}
           width={node.width || 150}
           height={node.height || 80}
-          fill="rgb(241 245 249)"
-          stroke="rgb(71 85 105)"
+          fill="rgb(243 244 246)"
+          stroke="rgb(55 65 81)"
           stroke-width="2"
           rx="4"
-          class="dark:fill-slate-800 dark:stroke-slate-600"
+          class="dark:fill-gray-800 dark:stroke-gray-600"
         />
         <text
           x={node.x + (node.width || 150) / 2}
           y={node.y + (node.height || 80) / 2}
           text-anchor="middle"
           dominant-baseline="middle"
-          class="text-sm font-medium fill-slate-700 dark:fill-slate-200"
+          class="text-sm font-medium fill-gray-700 dark:fill-gray-200"
         >
           {node.label}
         </text>
@@ -100,7 +100,7 @@
           fill="rgb(224 242 254)"
           stroke="rgb(14 165 233)"
           stroke-width="2"
-          class="dark:fill-sky-900 dark:stroke-sky-400"
+          class="dark:fill-sky-800 dark:stroke-sky-400"
         />
         <text
           x={node.x}
@@ -121,7 +121,7 @@
           fill="rgb(254 243 199)"
           stroke="rgb(245 158 11)"
           stroke-width="2"
-          class="dark:fill-amber-900 dark:stroke-amber-400"
+          class="dark:fill-amber-700 dark:stroke-amber-400"
         />
         <rect
           x={node.x}
@@ -131,7 +131,7 @@
           fill="rgb(254 243 199)"
           stroke="rgb(245 158 11)"
           stroke-width="2"
-          class="dark:fill-amber-900 dark:stroke-amber-400"
+          class="dark:fill-amber-700 dark:stroke-amber-400"
         />
         <ellipse
           cx={node.x + (node.width || 120) / 2}
@@ -141,7 +141,7 @@
           fill="rgb(254 243 199)"
           stroke="rgb(245 158 11)"
           stroke-width="2"
-          class="dark:fill-amber-900 dark:stroke-amber-400"
+          class="dark:fill-amber-700 dark:stroke-amber-400"
         />
         <text
           x={node.x + (node.width || 120) / 2}
