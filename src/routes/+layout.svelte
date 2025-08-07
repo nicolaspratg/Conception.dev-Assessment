@@ -41,10 +41,12 @@
 	</header>
 
 	<!-- Main Content Area -->
-	<main class="flex-1 pt-12 pb-24 overflow-hidden">
+	<main class="flex-1 pt-12 overflow-hidden">
 		{@render children?.()}
 	</main>
 
-	<!-- Prompt Bar -->
-	<PromptBar />
+	<!-- Floating Prompt Bar -->
+	<div class="pointer-events-none fixed inset-0 flex items-end justify-center pb-6">
+		<PromptBar class="pointer-events-auto w-[min(640px,90%)]" />
+	</div>
 </div>

@@ -21,7 +21,7 @@
   }
 </script>
 
-<div class="w-full">
+<div class="w-full h-full bg-[radial-gradient(theme(colors.gray.300)_1px,transparent_1px)] bg-[size:18px_18px] dark:bg-[radial-gradient(theme(colors.gray.700)_1px,transparent_1px)]">
   <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">
     Last updated: {lastUpdated}
   </div>
