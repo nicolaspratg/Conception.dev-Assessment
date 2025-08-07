@@ -53,7 +53,7 @@
 
 <div class="fixed bottom-0 inset-x-0 bg-white/80 dark:bg-[#343541]/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 p-4 z-50">
 	<div class="max-w-4xl mx-auto">
-		<form on:submit|preventDefault={handleSubmit} class="flex gap-3">
+		<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="flex gap-3">
 			<div class="flex-1">
 				<textarea
 					bind:value={prompt}
