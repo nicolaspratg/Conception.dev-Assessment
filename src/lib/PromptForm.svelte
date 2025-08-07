@@ -51,33 +51,33 @@
   }
 </script>
 
-<div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-  <h2 class="text-lg font-semibold text-gray-900 mb-4">Generate Diagram</h2>
+<div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 sm:p-6 mb-6 shadow-sm">
+  <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Generate Diagram</h2>
   
   <form on:submit|preventDefault={handleSubmit} class="space-y-4">
     <div>
-      <label for="prompt" class="block text-sm font-medium text-gray-700 mb-2">
+      <label for="prompt" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
         Describe your application architecture:
       </label>
       <textarea
         id="prompt"
         bind:value={prompt}
         placeholder="e.g., 'A web app with a React frontend, Node.js API, and PostgreSQL database'"
-        class="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        class="w-full h-24 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
         disabled={isGenerating}
       ></textarea>
     </div>
 
     {#if error}
-      <div class="text-red-600 text-sm">{error}</div>
+      <div class="text-red-600 dark:text-red-400 text-sm">{error}</div>
     {:else if !isGenerating && prompt === ''}
-      <div class="text-green-600 text-sm">✅ Diagram generated successfully!</div>
+      <div class="text-green-600 dark:text-green-400 text-sm">✅ Diagram generated successfully!</div>
     {/if}
 
     <button
       type="submit"
       disabled={isGenerating || !prompt.trim()}
-      class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      class="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
     >
       {isGenerating ? 'Generating...' : 'Generate Diagram'}
     </button>

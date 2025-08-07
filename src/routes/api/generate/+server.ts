@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { z } from 'zod';
-import { OPENAI_API_KEY } from '$env/static/private';
+import { env } from '$env/dynamic/private';
 
 // Simple rate limiting (in production, use Redis or similar)
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -40,6 +40,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
       return json({ error: 'Invalid prompt' }, { status: 400 });
     }
 
+    const OPENAI_API_KEY = env.OPENAI_API_KEY;
     if (!OPENAI_API_KEY) {
       return json({ error: 'OpenAI API key not configured' }, { status: 500 });
     }

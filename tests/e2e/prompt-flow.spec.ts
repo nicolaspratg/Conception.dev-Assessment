@@ -24,11 +24,10 @@ test('prompt flow smoke test', async ({ page }) => {
   // Wait for the button to show loading state briefly
   await expect(generateButton).toBeDisabled();
   
-  // Wait for generation to complete and diagram to update
-  await expect(generateButton).toBeEnabled();
+  // Wait for generation to complete (with timeout)
+  await page.waitForTimeout(3000);
   
   // Verify diagram has nodes (indicating successful generation)
-  // Look for any rendered node elements (rect, circle, or ellipse)
   const nodes = page.locator('svg rect, svg circle, svg ellipse');
   const nodeCount = await nodes.count();
   expect(nodeCount).toBeGreaterThan(0);

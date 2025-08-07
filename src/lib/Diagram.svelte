@@ -21,8 +21,8 @@
   }
 </script>
 
-<div class="w-full h-full bg-gray-50 p-4">
-  <div class="text-xs text-gray-500 mb-2">
+<div class="w-full h-full bg-gray-50 dark:bg-gray-900 p-4">
+  <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">
     Last updated: {lastUpdated}
   </div>
   <svg class="w-full h-full" viewBox="0 0 600 400">
@@ -76,17 +76,18 @@
           y={node.y}
           width={node.width || 150}
           height={node.height || 80}
-          fill="#3b82f6"
-          stroke="#1d4ed8"
+          fill="rgb(241 245 249)"
+          stroke="rgb(71 85 105)"
           stroke-width="2"
           rx="4"
+          class="dark:fill-slate-800 dark:stroke-slate-600"
         />
         <text
           x={node.x + (node.width || 150) / 2}
           y={node.y + (node.height || 80) / 2}
           text-anchor="middle"
           dominant-baseline="middle"
-          class="text-sm font-medium fill-white"
+          class="text-sm font-medium fill-slate-700 dark:fill-slate-200"
         >
           {node.label}
         </text>
@@ -96,16 +97,17 @@
           cx={node.x}
           cy={node.y}
           r={node.radius || 50}
-          fill="#10b981"
-          stroke="#059669"
+          fill="rgb(224 242 254)"
+          stroke="rgb(14 165 233)"
           stroke-width="2"
+          class="dark:fill-sky-900 dark:stroke-sky-400"
         />
         <text
           x={node.x}
           y={node.y}
           text-anchor="middle"
           dominant-baseline="middle"
-          class="text-sm font-medium fill-white"
+          class="text-sm font-medium fill-sky-700 dark:fill-sky-200"
         >
           {node.label}
         </text>
@@ -116,34 +118,37 @@
           cy={node.y}
           rx={(node.width || 120) / 2}
           ry="15"
-          fill="#8b5cf6"
-          stroke="#7c3aed"
+          fill="rgb(254 243 199)"
+          stroke="rgb(245 158 11)"
           stroke-width="2"
+          class="dark:fill-amber-900 dark:stroke-amber-400"
         />
         <rect
           x={node.x}
           y={node.y}
           width={node.width || 120}
           height={node.height || 80}
-          fill="#8b5cf6"
-          stroke="#7c3aed"
+          fill="rgb(254 243 199)"
+          stroke="rgb(245 158 11)"
           stroke-width="2"
+          class="dark:fill-amber-900 dark:stroke-amber-400"
         />
         <ellipse
           cx={node.x + (node.width || 120) / 2}
           cy={node.y + (node.height || 80)}
           rx={(node.width || 120) / 2}
           ry="15"
-          fill="#8b5cf6"
-          stroke="#7c3aed"
+          fill="rgb(254 243 199)"
+          stroke="rgb(245 158 11)"
           stroke-width="2"
+          class="dark:fill-amber-900 dark:stroke-amber-400"
         />
         <text
           x={node.x + (node.width || 120) / 2}
           y={node.y + (node.height || 80) / 2}
           text-anchor="middle"
           dominant-baseline="middle"
-          class="text-sm font-medium fill-white"
+          class="text-sm font-medium fill-amber-700 dark:fill-amber-200"
         >
           {node.label}
         </text>
