@@ -2,4 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body { @apply h-full overflow-hidden; } 
+html, body { 
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Ensure proper height calculations */
+#svelte {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+} 

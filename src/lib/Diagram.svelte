@@ -21,8 +21,8 @@
   }
 </script>
 
-<div class="w-full h-full bg-gray-50 dark:bg-gray-900 p-4">
-  <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">
+<div class="w-full">
+  <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">
     Last updated: {lastUpdated}
   </div>
   <svg class="w-full h-full" viewBox="0 0 600 400">
