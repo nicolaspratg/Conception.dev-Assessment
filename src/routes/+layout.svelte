@@ -45,6 +45,6 @@
 	<!-- Main Content Area -->
 	<div class="flex-1 relative overflow-hidden">
 		{@render children?.()}
-		<PromptBar class="pointer-events-auto absolute inset-x-0 bottom-6 mx-auto max-w-xl"/>
+		<PromptBar />
 	</div>
 </div>

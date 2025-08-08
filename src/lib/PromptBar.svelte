@@ -1,23 +1,27 @@
 <script lang="ts">
 	import { diagramStore } from './stores/diagramStore.js';
 	import { diagramApi } from './api/client/diagramApi.js';
+	import { createEventDispatcher } from 'svelte';
 	
-	let { class: className = '' } = $props();
+	const dispatch = createEventDispatcher();
 	
 	let prompt = $state('');
 	let isGenerating = $state(false);
-	let error = $state('');
-	let submitTimeout: number | null = null;
+	let showToast = $state(false);
+	let textareaEl: HTMLTextAreaElement;
+
+	// Auto-resize textarea
+	$effect(() => {
+		if (textareaEl && prompt) {
+			textareaEl.style.height = 'auto';
+			textareaEl.style.height = Math.min(textareaEl.scrollHeight, 160) + 'px'; // up to 6 lines
+		}
+	});
 
 	async function handleSubmit() {
-		if (!prompt.trim()) {
-			error = 'Please enter a prompt';
+		const text = prompt.trim();
+		if (!text) {
 			return;
-		}
-
-		// Debounce to prevent multiple calls on hot-reload
-		if (submitTimeout) {
-			clearTimeout(submitTimeout);
 		}
 
 		if (isGenerating) {
@@ -25,47 +29,80 @@
 		}
 
 		isGenerating = true;
-		error = '';
 
 		try {
-			const diagramData = await diagramApi.generateDiagram({ prompt });
+			console.log('Generating diagram for prompt:', text);
+			const diagramData = await diagramApi.generateDiagram({ prompt: text });
+			console.log('Received diagram data:', diagramData);
 			diagramStore.set(diagramData);
 			
 			// Show success message
-			error = '';
 			prompt = ''; // Clear the form
+			showToast = true;
+			setTimeout(() => (showToast = false), 3000);
 		} catch (err) {
-			error = err instanceof Error ? err.message : 'An error occurred';
+			console.error('Error generating diagram:', err);
+			// Don't clear the prompt on error so user can try again
 		} finally {
 			isGenerating = false;
 		}
 	}
+
+	function handleKey(e: KeyboardEvent) {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault();
+			handleSubmit();
+		}
+	}
 </script>
 
-<div class="rounded-xl bg-white/70 dark:bg-[#343541]/70 backdrop-blur shadow-lg border border-gray-200 dark:border-gray-700 p-3 md:p-4 flex flex-col md:flex-row gap-3 md:gap-2 {className}">
-	<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="flex flex-col sm:flex-row gap-3 w-full">
-		<div class="flex-1">
-			<textarea
-				bind:value={prompt}
-				placeholder="Describe your application architecture..."
-				class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-600 dark:focus:ring-emerald-400 focus:border-transparent bg-white dark:bg-[#40414f] text-gray-900 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-400 resize-none"
-				rows="1"
-				disabled={isGenerating}
-			></textarea>
-		</div>
-		
+<!-- Outer anchor keeps bar centred and visible -->
+<div class="absolute inset-x-0 bottom-6 flex justify-center z-50 pointer-events-none">
+	<div class="pointer-events-auto w-[min(640px,90%)] bg-white/70 dark:bg-gray-900/70
+				backdrop-blur rounded-xl px-4 py-3 flex gap-2 border border-gray-200 dark:border-gray-700">
+		<textarea
+			bind:this={textareaEl}
+			bind:value={prompt}
+			onkeydown={handleKey}
+			rows="2"
+			placeholder="Describe your application architecture…"
+			class="flex-1 resize-none overflow-y-auto bg-transparent text-gray-900 dark:text-gray-200
+				   placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none min-h-[56px] max-h-[160px]"
+		></textarea>
+
 		<button
-			type="submit"
-			disabled={isGenerating || !prompt.trim()}
-			class="px-4 py-2 bg-sky-600 dark:bg-emerald-400 text-white dark:text-gray-900 rounded-lg hover:bg-sky-700 dark:hover:bg-emerald-300 focus:outline-none focus:ring-2 focus:ring-sky-500 dark:focus:ring-emerald-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+			onclick={handleSubmit}
+			class="w-14 h-14 flex items-center justify-center bg-emerald-600
+				   hover:bg-emerald-500 rounded-lg text-2xl disabled:opacity-50"
+			disabled={isGenerating}
+			aria-label="Generate"
 		>
-			{isGenerating ? 'Generating...' : 'Generate'}
+			{#if isGenerating}
+				<svg class="animate-spin w-5 h-5" viewBox="0 0 24 24">
+					<circle cx="12" cy="12" r="10"
+							stroke="currentColor" stroke-width="4" fill="none"/>
+				</svg>
+			{:else}
+				🡅
+			{/if}
 		</button>
-	</form>
+	</div>
+</div>
+
+{#if showToast}
+	<div class="fixed bottom-24 right-6 bg-emerald-600 text-white
+			   px-3 py-2 rounded shadow z-50 animate-fade-in">
+		Diagram generated successfully!
+	</div>
+{/if}
+
+<style>
+	@keyframes fade-in {
+		from { opacity: 0; transform: translateY(10px); }
+		to { opacity: 1; transform: translateY(0); }
+	}
 	
-	{#if error}
-		<div class="mt-2 text-red-600 dark:text-red-400 text-sm">{error}</div>
-	{:else if !isGenerating && prompt === ''}
-		<div class="mt-2 text-green-600 dark:text-green-400 text-sm">✅ Diagram generated successfully!</div>
-	{/if}
-</div> 
+	.animate-fade-in {
+		animation: fade-in 0.3s ease-out;
+	}
+</style> 
