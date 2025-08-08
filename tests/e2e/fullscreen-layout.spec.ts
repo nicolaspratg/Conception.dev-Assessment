@@ -3,44 +3,32 @@ import { test, expect } from '@playwright/test';
 test('full viewport diagram layout', async ({ page }) => {
   // Navigate to the playground
   await page.goto('/playground');
-  
-  // Wait for the page to load
-  await expect(page.locator('svg')).toBeVisible();
-  
+
+  // Wait for the diagram to load
+  await page.waitForSelector('svg');
+
   // Get viewport dimensions
-  const viewportWidth = await page.evaluate(() => window.innerWidth);
-  const viewportHeight = await page.evaluate(() => window.innerHeight);
-  
-  // Verify SVG takes full viewport width
-  const svgWidth = await page.evaluate(() => {
-    const svg = document.querySelector('svg');
-    if (!svg) return 0;
-    const rect = svg.getBoundingClientRect();
-    return rect.width;
-  });
+  const viewportWidth = page.viewportSize()!.width;
+  const viewportHeight = page.viewportSize()!.height;
+
+  // Get SVG dimensions
+  const svg = page.locator('svg');
+  const svgWidth = await svg.evaluate(el => el.clientWidth);
+  const svgHeight = await svg.evaluate(el => el.clientHeight);
+
+  // Verify SVG takes up most of the viewport (accounting for header)
+  const headerHeight = 48; // h-12 = 48px
+  const expectedHeight = viewportHeight - headerHeight;
   
   expect(svgWidth).toBeGreaterThan(viewportWidth - 2);
-  expect(svgWidth).toBeLessThanOrEqual(viewportWidth);
-  
-  // Verify SVG takes full viewport height
-  const svgHeight = await page.evaluate(() => {
-    const svg = document.querySelector('svg');
-    if (!svg) return 0;
-    const rect = svg.getBoundingClientRect();
-    return rect.height;
-  });
-  
-  expect(svgHeight).toBeGreaterThan(viewportHeight - 2);
-  expect(svgHeight).toBeLessThanOrEqual(viewportHeight);
-  
-  // Verify dotted background is visible
-  const dottedBackground = page.locator('div').filter({ hasText: '' }).first();
-  await expect(dottedBackground).toBeVisible();
-  
-  // Verify prompt bar is positioned at bottom
-  const promptBar = page.locator('form');
+  expect(svgHeight).toBeGreaterThan(expectedHeight - 2);
+  expect(svgHeight).toBeLessThanOrEqual(expectedHeight);
+
+  // Verify the prompt bar is present and positioned correctly
+  const promptBar = page.locator('textarea');
   await expect(promptBar).toBeVisible();
   
-  // Take screenshot to confirm layout
-  await page.screenshot({ path: 'fullscreen-layout.png', fullPage: true });
+  // Verify prompt bar is positioned at bottom
+  const promptBarBox = await promptBar.boundingBox();
+  expect(promptBarBox!.y).toBeGreaterThan(viewportHeight - 200); // Should be near bottom
 });

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { diagramStore } from './stores/diagramStore.js';
+	import { diagramApi } from './api/client/diagramApi.js';
 	
 	let { class: className = '' } = $props();
 	
@@ -27,19 +28,7 @@
 		error = '';
 
 		try {
-			const response = await fetch('/api/generate', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ prompt }),
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to generate diagram');
-			}
-
-			const diagramData = await response.json();
+			const diagramData = await diagramApi.generateDiagram({ prompt });
 			diagramStore.set(diagramData);
 			
 			// Show success message

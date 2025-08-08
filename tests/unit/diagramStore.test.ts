@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { diagramStore } from './stores/diagramStore.js';
-import type { DiagramData } from './types/diagram.js';
+import { diagramStore } from '../../src/lib/stores/diagramStore.js';
+import type { DiagramData } from '../../src/lib/types/diagram.js';
 
 describe('Diagram Store', () => {
   it('initializes with example data', () => {

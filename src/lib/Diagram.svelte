@@ -372,6 +372,85 @@
         >
           {node.label}
         </text>
+      {:else if node.type === 'custom'}
+        <!-- Custom shapes based on shape property -->
+        {#if node.shape === 'hexagon'}
+          <!-- Hexagon for load balancers, etc. -->
+          <polygon
+            points="{node.x + (node.width || 100) / 2},{node.y} {node.x + (node.width || 100)},{node.y + (node.height || 60) * 0.25} {node.x + (node.width || 100)},{node.y + (node.height || 60) * 0.75} {node.x + (node.width || 100) / 2},{node.y + (node.height || 60)} {node.x},{node.y + (node.height || 60) * 0.75} {node.x},{node.y + (node.height || 60) * 0.25}"
+            fill="rgb(236 254 255)"
+            stroke="rgb(6 182 212)"
+            stroke-width="2"
+            class="dark:fill-cyan-800 dark:stroke-cyan-400"
+          />
+          <text
+            x={node.x + (node.width || 100) / 2}
+            y={node.y + (node.height || 60) / 2}
+            text-anchor="middle"
+            dominant-baseline="middle"
+            class="text-sm font-medium fill-cyan-700 dark:fill-cyan-200"
+          >
+            {node.label}
+          </text>
+        {:else if node.shape === 'diamond'}
+          <!-- Diamond for decision points, etc. -->
+          <polygon
+            points="{node.x + (node.width || 100) / 2},{node.y} {node.x + (node.width || 100)},{node.y + (node.height || 60) / 2} {node.x + (node.width || 100) / 2},{node.y + (node.height || 60)} {node.x},{node.y + (node.height || 60) / 2}"
+            fill="rgb(254 226 226)"
+            stroke="rgb(239 68 68)"
+            stroke-width="2"
+            class="dark:fill-red-800 dark:stroke-red-400"
+          />
+          <text
+            x={node.x + (node.width || 100) / 2}
+            y={node.y + (node.height || 60) / 2}
+            text-anchor="middle"
+            dominant-baseline="middle"
+            class="text-sm font-medium fill-red-700 dark:fill-red-200"
+          >
+            {node.label}
+          </text>
+        {:else if node.shape === 'triangle'}
+          <!-- Triangle for special services -->
+          <polygon
+            points="{node.x + (node.width || 100) / 2},{node.y} {node.x + (node.width || 100)},{node.y + (node.height || 60)} {node.x},{node.y + (node.height || 60)}"
+            fill="rgb(240 253 244)"
+            stroke="rgb(34 197 94)"
+            stroke-width="2"
+            class="dark:fill-green-800 dark:stroke-green-400"
+          />
+          <text
+            x={node.x + (node.width || 100) / 2}
+            y={node.y + (node.height || 60) * 0.67}
+            text-anchor="middle"
+            dominant-baseline="middle"
+            class="text-sm font-medium fill-green-700 dark:fill-green-200"
+          >
+            {node.label}
+          </text>
+        {:else}
+          <!-- Default to rectangle for unknown custom shapes -->
+          <rect
+            x={node.x}
+            y={node.y}
+            width={node.width || 150}
+            height={node.height || 80}
+            fill="rgb(243 244 246)"
+            stroke="rgb(55 65 81)"
+            stroke-width="2"
+            rx="4"
+            class="dark:fill-gray-800 dark:stroke-gray-600"
+          />
+          <text
+            x={node.x + (node.width || 150) / 2}
+            y={node.y + (node.height || 80) / 2}
+            text-anchor="middle"
+            dominant-baseline="middle"
+            class="text-sm font-medium fill-gray-700 dark:fill-gray-200"
+          >
+            {node.label}
+          </text>
+        {/if}
       {/if}
     {/each}
     </g>

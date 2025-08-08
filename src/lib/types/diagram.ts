@@ -1,14 +1,16 @@
-import type { ShapeType } from '$lib/diagram/constants';
+export type NodeType = 'component' | 'external' | 'datastore' | 'custom';
+export type ShapeType = 'rectangle' | 'circle' | 'cylinder' | 'hexagon' | 'diamond' | 'triangle';
 
 export interface Node {
   id: string;
-  type: ShapeType;
+  type: NodeType;
   label: string;
   x: number;
   y: number;
   width?: number;
   height?: number;
   radius?: number;
+  shape?: ShapeType; // For custom nodes
 }
 
 export interface Edge {
