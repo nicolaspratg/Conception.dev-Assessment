@@ -2,51 +2,270 @@
   import { SHAPES, type ShapeType } from './diagram/constants.js';
   import { diagramStore } from './stores/diagramStore.js';
   import type { DiagramData, Node } from './types/diagram.js';
+  import { computeLayout } from './layout.js';
+  import { onMount } from 'svelte';
+
+  let containerWidth = 600;
+  let containerHeight = 400;
+  let svgElement: SVGElement;
 
   $: data = $diagramStore;
   $: lastUpdated = new Date().toLocaleTimeString();
+  $: layoutData = {
+    nodes: computeLayout(data.nodes, data.edges, containerWidth, containerHeight),
+    edges: data.edges
+  };
+
+  // Reset occupied areas when layout changes
+  $: {
+    occupiedAreas = [];
+  }
+
+  // Calculate graph centering offsets
+  $: graphBounds = layoutData.nodes.length > 0 ? {
+    minX: Math.min(...layoutData.nodes.map(n => n.type === 'external' ? n.x : n.x)),
+    maxX: Math.max(...layoutData.nodes.map(n => {
+      if (n.type === 'external') {
+        return n.x + (n.radius || 50) * 2;
+      }
+      return n.x + (n.width || 150);
+    })),
+    minY: Math.min(...layoutData.nodes.map(n => n.type === 'external' ? n.y : n.y)),
+    maxY: Math.max(...layoutData.nodes.map(n => {
+      if (n.type === 'external') {
+        return n.y + (n.radius || 50) * 2;
+      }
+      return n.y + (n.height || 80);
+    }))
+  } : { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+
+  $: graphOffsetX = (containerWidth - (graphBounds.maxX - graphBounds.minX)) / 2 - graphBounds.minX;
+  $: graphOffsetY = (containerHeight - (graphBounds.maxY - graphBounds.minY)) / 2 - graphBounds.minY;
+
+  // Shared occupied areas for edge labels
+  let occupiedAreas: { x: number; y: number; w: number; h: number }[] = [];
+
+  function boxesOverlap(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) {
+    return !(
+      a.x + a.w < b.x ||
+      a.x > b.x + b.w ||
+      a.y + a.h < b.y ||
+      a.y > b.y + b.h
+    );
+  }
+
+  function isLabelAreaFree(box: { x: number; y: number; w: number; h: number }) {
+    return (
+      !isLabelColliding(box.x, box.y, box.w, box.h) &&
+      !occupiedAreas.some((o) => boxesOverlap(o, box))
+    );
+  }
 
   function getNodeById(id: string): Node | undefined {
-    return data.nodes.find(node => node.id === id);
+    return layoutData.nodes.find(node => node.id === id);
   }
 
   function getNodeCenter(node: Node): { x: number; y: number } {
     if (node.type === 'external' && node.radius) {
-      return { x: node.x, y: node.y };
+      return { 
+        x: node.x + (node.radius || 50), 
+        y: node.y + (node.radius || 50) 
+      };
     }
     return {
       x: node.x + (node.width || 0) / 2,
       y: node.y + (node.height || 0) / 2
     };
   }
+
+  function getNodeBounds(node: Node): { x: number; y: number; width: number; height: number } {
+    if (node.type === 'external' && node.radius) {
+      const r = node.radius || 50;
+      return { x: node.x, y: node.y, width: r * 2, height: r * 2 };
+    }
+    return {
+      x: node.x,
+      y: node.y,
+      width: node.width || 150,
+      height: node.height || 80
+    };
+  }
+
+  function isLabelColliding(labelX: number, labelY: number, labelWidth: number, labelHeight: number): boolean {
+    const labelBounds = { x: labelX, y: labelY, width: labelWidth, height: labelHeight };
+    
+    return layoutData.nodes.some(node => {
+      const nodeBounds = getNodeBounds(node);
+      
+      // Add more padding to avoid collisions
+      const padding = 15;
+      const expandedNodeBounds = {
+        x: nodeBounds.x - padding,
+        y: nodeBounds.y - padding,
+        width: nodeBounds.width + padding * 2,
+        height: nodeBounds.height + padding * 2
+      };
+      
+      return !(labelBounds.x + labelBounds.width < expandedNodeBounds.x ||
+               labelBounds.x > expandedNodeBounds.x + expandedNodeBounds.width ||
+               labelBounds.y + labelBounds.height < expandedNodeBounds.y ||
+               labelBounds.y > expandedNodeBounds.y + expandedNodeBounds.height);
+    });
+  }
+
+  function rectIntersection(p: { x: number; y: number }, rect: { x: number; y: number; width: number; height: number }): { x: number; y: number } {
+    const centerX = rect.x + rect.width / 2;
+    const centerY = rect.y + rect.height / 2;
+    const dx = p.x - centerX;
+    const dy = p.y - centerY;
+    
+    if (Math.abs(dx) * rect.height <= Math.abs(dy) * rect.width) {
+      // Intersection with top or bottom edge
+      const sign = dy > 0 ? 1 : -1;
+      return { x: centerX + (dx * rect.height) / (2 * Math.abs(dy)), y: centerY + sign * rect.height / 2 };
+    } else {
+      // Intersection with left or right edge
+      const sign = dx > 0 ? 1 : -1;
+      return { x: centerX + sign * rect.width / 2, y: centerY + (dy * rect.width) / (2 * Math.abs(dx)) };
+    }
+  }
+
+  function circleIntersection(p: { x: number; y: number }, c: { x: number; y: number }, r: number): { x: number; y: number } {
+    const dx = p.x - c.x;
+    const dy = p.y - c.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance === 0) return { x: c.x + r, y: c.y };
+    
+    return {
+      x: c.x + (dx * r) / distance,
+      y: c.y + (dy * r) / distance
+    };
+  }
+
+  function getIntersection(source: Node, target: Node): { x1: number; y1: number; x2: number; y2: number } {
+    const sourceCenter = getNodeCenter(source);
+    const targetCenter = getNodeCenter(target);
+    
+    let x1: number, y1: number, x2: number, y2: number;
+    
+    if (source.type === 'external') {
+      const intersection = circleIntersection(targetCenter, sourceCenter, source.radius || 50);
+      x1 = intersection.x;
+      y1 = intersection.y;
+    } else {
+      const sourceBounds = getNodeBounds(source);
+      const intersection = rectIntersection(targetCenter, sourceBounds);
+      x1 = intersection.x;
+      y1 = intersection.y;
+    }
+    
+    if (target.type === 'external') {
+      const intersection = circleIntersection(sourceCenter, targetCenter, target.radius || 50);
+      x2 = intersection.x;
+      y2 = intersection.y;
+    } else {
+      const targetBounds = getNodeBounds(target);
+      const intersection = rectIntersection(sourceCenter, targetBounds);
+      x2 = intersection.x;
+      y2 = intersection.y;
+    }
+    
+    return { x1, y1, x2, y2 };
+  }
+
+  function updateContainerSize() {
+    if (svgElement) {
+      const rect = svgElement.getBoundingClientRect();
+      containerWidth = rect.width;
+      containerHeight = rect.height;
+    }
+  }
+
+  onMount(() => {
+    updateContainerSize();
+    window.addEventListener('resize', updateContainerSize);
+    
+    return () => {
+      window.removeEventListener('resize', updateContainerSize);
+    };
+  });
 </script>
 
-<div class="w-full h-full bg-[radial-gradient(theme(colors.gray.300)_1px,transparent_1px)] bg-[size:18px_18px] dark:bg-[radial-gradient(theme(colors.gray.700)_1px,transparent_1px)]">
-  <div class="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">
-    Last updated: {lastUpdated}
-  </div>
-  <svg class="w-full h-full" viewBox="0 0 600 400">
-    <!-- Render edges first (so they appear behind nodes) -->
-    {#each data.edges as edge}
+<div class="h-full w-full bg-gray-100 dark:bg-gray-900 bg-[radial-gradient(circle_at_1px_1px,rgb(156_163_175)_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,rgb(75_85_99)_1px,transparent_0)] bg-[size:18px_18px]">
+  <svg bind:this={svgElement} class="w-full h-full" viewBox="0 0 {containerWidth} {containerHeight}">
+    <g id="diagram" transform="translate({graphOffsetX}, {graphOffsetY})">
+      <!-- Render edges first (so they appear behind nodes) -->
+    {#each layoutData.edges as edge}
       {@const sourceNode = getNodeById(edge.source)}
       {@const targetNode = getNodeById(edge.target)}
       {#if sourceNode && targetNode}
-        {@const sourceCenter = getNodeCenter(sourceNode)}
-        {@const targetCenter = getNodeCenter(targetNode)}
+        {@const intersection = getIntersection(sourceNode, targetNode)}
+        {@const x1 = intersection.x1}
+        {@const y1 = intersection.y1}
+        {@const x2 = intersection.x2}
+        {@const y2 = intersection.y2}
+        {@const midX = (x1 + x2) / 2}
+        {@const midY = (y1 + y2) / 2}
+        {@const labelOffset = 35}
+        {@const textWidth = Math.max(edge.label.length * 7, 40)}
+        {@const textHeight = 20}
+        {@const positions = [
+          { x: midX, y: midY - labelOffset, anchor: 'middle', dy: '-8' }, // above
+          { x: midX, y: midY + labelOffset, anchor: 'middle', dy: '16' },  // below
+          { x: midX - labelOffset, y: midY, anchor: 'end', dy: '4' },      // left
+          { x: midX + labelOffset, y: midY, anchor: 'start', dy: '4' }     // right
+        ]}
+        {@const candidate = positions.find(p => {
+          const bx = p.x - (p.anchor === 'middle' ? textWidth / 2 : p.anchor === 'end' ? textWidth : 0);
+          const by = p.y - textHeight / 2;
+          return isLabelAreaFree({ x: bx, y: by, w: textWidth, h: textHeight });
+        })}
+
+        {@const bestPosition = candidate || (() => {
+          // keep moving upward until free
+          let offset = labelOffset + 20;
+          let trial = null;
+          while (!trial && offset < 200) {
+            const pos = { x: midX, y: midY - offset, anchor: 'middle', dy: '-8' };
+            const bx = pos.x - textWidth / 2;
+            const by = pos.y - textHeight / 2;
+            if (isLabelAreaFree({ x: bx, y: by, w: textWidth, h: textHeight })) {
+              trial = pos;
+            }
+            offset += 20;
+          }
+          return trial || { x: midX, y: midY - 50, anchor: 'middle', dy: '-8' };
+        })()}
+
+        {@const bx = bestPosition.x - (bestPosition.anchor === 'middle' ? textWidth / 2 : bestPosition.anchor === 'end' ? textWidth : 0)}
+        {@const by = bestPosition.y - textHeight / 2}
         <line
-          x1={sourceCenter.x}
-          y1={sourceCenter.y}
-          x2={targetCenter.x}
-          y2={targetCenter.y}
-          stroke="#6b7280"
+          x1={x1}
+          y1={y1}
+          x2={x2}
+          y2={y2}
           stroke-width="2"
-          marker-end="url(#arrowhead)"
+          marker-end="url(#arrow)"
+          class="stroke-gray-400 dark:stroke-gray-600"
+        />
+        <!-- Background rectangle for text -->
+        <rect
+          x={bx - 2}
+          y={by - 2}
+          width={textWidth + 4}
+          height={textHeight + 4}
+          rx="3"
+          fill="white"
+          opacity="0.9"
+          class="dark:fill-[#202123]"
         />
         <text
-          x={(sourceCenter.x + targetCenter.x) / 2}
-          y={(sourceCenter.y + targetCenter.y) / 2 - 5}
-          text-anchor="middle"
-          class="text-xs fill-gray-600"
+          x={bestPosition.x}
+          y={bestPosition.y}
+          text-anchor={bestPosition.anchor}
+          dy={bestPosition.dy}
+          class="text-[11px] font-semibold fill-gray-700 dark:fill-gray-200 pointer-events-none"
         >
           {edge.label}
         </text>
@@ -56,19 +275,20 @@
     <!-- Arrow marker definition -->
     <defs>
       <marker
-        id="arrowhead"
-        markerWidth="10"
-        markerHeight="7"
-        refX="9"
-        refY="3.5"
-        orient="auto"
+        id="arrow"
+        viewBox="0 0 10 10"
+        refX="8"
+        refY="5"
+        markerWidth="6"
+        markerHeight="6"
+        orient="auto-start-reverse"
       >
-        <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/>
       </marker>
     </defs>
 
     <!-- Render nodes -->
-    {#each data.nodes as node}
+    {#each layoutData.nodes as node}
       {#if node.type === 'component'}
         <!-- Rectangle for components -->
         <rect
@@ -94,8 +314,8 @@
       {:else if node.type === 'external'}
         <!-- Circle for external APIs -->
         <circle
-          cx={node.x}
-          cy={node.y}
+          cx={node.x + (node.radius || 50)}
+          cy={node.y + (node.radius || 50)}
           r={node.radius || 50}
           fill="rgb(224 242 254)"
           stroke="rgb(14 165 233)"
@@ -103,8 +323,8 @@
           class="dark:fill-sky-800 dark:stroke-sky-400"
         />
         <text
-          x={node.x}
-          y={node.y}
+          x={node.x + (node.radius || 50)}
+          y={node.y + (node.radius || 50)}
           text-anchor="middle"
           dominant-baseline="middle"
           class="text-sm font-medium fill-sky-700 dark:fill-sky-200"
@@ -154,5 +374,6 @@
         </text>
       {/if}
     {/each}
+    </g>
   </svg>
 </div> 

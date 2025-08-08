@@ -2,22 +2,24 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import PromptBar from '$lib/PromptBar.svelte';
+	import { themeStore } from '$lib/stores/themeStore.js';
 	import { onMount } from 'svelte';
-
 
 	let { children } = $props();
 	
-	let isDark = $state(false);
-	
 	onMount(() => {
-		const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-		document.documentElement.classList.toggle("dark", prefersDark);
-		isDark = prefersDark;
+		themeStore.init();
+	});
+	
+	// Reactive statement to update the dark class when theme changes
+	$effect(() => {
+		if (typeof document !== 'undefined') {
+			document.documentElement.classList.toggle("dark", $themeStore);
+		}
 	});
 	
 	function toggleDarkMode() {
-		isDark = !isDark;
-		document.documentElement.classList.toggle("dark", isDark);
+		themeStore.toggle();
 	}
 </script>
 
@@ -25,9 +27,9 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-<div class="min-h-screen bg-gray-50 dark:bg-[#202123] transition-colors duration-200 flex flex-col">
+<div class="h-screen flex flex-col">
 	<!-- Title Bar -->
-	<header class="fixed top-0 inset-x-0 h-12 bg-white dark:bg-[#343541] border-b border-gray-200 dark:border-gray-700 px-4 flex items-center justify-between z-40">
+	<header class="h-12 bg-white dark:bg-[#343541] border-b border-gray-200 dark:border-gray-700 px-4 flex items-center justify-between z-40">
 		<h1 class="text-lg font-semibold text-gray-900 dark:text-gray-200">
 			Conception.dev Mock-up Generator
 		</h1>
@@ -36,17 +38,13 @@
 			class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
 			aria-label="Toggle dark mode"
 		>
-			{isDark ? '☀️' : '🌙'}
+			{$themeStore ? '☀️' : '🌙'}
 		</button>
 	</header>
 
 	<!-- Main Content Area -->
-	<main class="flex-1 pt-12 overflow-hidden">
+	<div class="flex-1 relative overflow-hidden">
 		{@render children?.()}
-	</main>
-
-	<!-- Floating Prompt Bar -->
-	<div class="pointer-events-none fixed inset-0 flex items-end justify-center pb-6">
-		<PromptBar class="pointer-events-auto w-[min(640px,90%)]" />
+		<PromptBar class="pointer-events-auto absolute inset-x-0 bottom-6 mx-auto max-w-xl"/>
 	</div>
 </div>

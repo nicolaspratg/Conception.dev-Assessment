@@ -1,0 +1,18 @@
+warning: LF will be replaced by CRLF in package-lock.json.
+The file will have its original line endings in your working directory
+warning: LF will be replaced by CRLF in package.json.
+The file will have its original line endings in your working directory
+warning: LF will be replaced by CRLF in playwright-report/index.html.
+The file will have its original line endings in your working directory
+warning: LF will be replaced by CRLF in src/lib/Diagram.svelte.
+The file will have its original line endings in your working directory
+warning: LF will be replaced by CRLF in tests/e2e/prompt-flow.spec.ts.
+The file will have its original line endings in your working directory
+ package-lock.json              |  29 [32m++++[m[31m-[m
+ package.json                   |   2 [32m+[m
+ playwright-report/index.html   |   2 [32m+[m[31m-[m
+ src/lib/Diagram.svelte         | 282 [32m++++++++++++++++++++++++++++++++++++[m[31m-----[m
+ src/lib/diagramStore.test.ts   |  13 [32m+[m[31m-[m
+ src/lib/stores/diagramStore.ts |   5 [32m+[m[31m-[m
+ tests/e2e/prompt-flow.spec.ts  |   4 [32m+[m[31m-[m
+ 7 files changed, 296 insertions(+), 41 deletions(-)

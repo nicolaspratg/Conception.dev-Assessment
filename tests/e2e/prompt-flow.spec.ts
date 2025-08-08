@@ -23,7 +23,7 @@ test('prompt flow smoke test - light mode', async ({ page }) => {
   await expect(page.locator('svg')).toBeVisible();
   
   // Verify diagram has dotted background
-  const lightDiagramContainer = page.locator('div').filter({ hasText: 'Last updated:' });
+  const lightDiagramContainer = page.locator('div').filter({ hasText: 'Last updated:' }).last().locator('..');
   await expect(lightDiagramContainer).toHaveCSS('background-image', /radial-gradient/);
   
   // Verify diagram has nodes (indicating successful generation)
@@ -65,7 +65,7 @@ test('prompt flow smoke test - dark mode', async ({ page }) => {
   await expect(page.locator('svg')).toBeVisible();
   
   // Verify diagram has dotted background
-  const darkDiagramContainer = page.locator('div').filter({ hasText: 'Last updated:' });
+  const darkDiagramContainer = page.locator('div').filter({ hasText: 'Last updated:' }).last().locator('..');
   await expect(darkDiagramContainer).toHaveCSS('background-image', /radial-gradient/);
   
   // Verify diagram has nodes (indicating successful generation)
