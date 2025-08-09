@@ -42,9 +42,26 @@
   // Calculate graph bounds using actual node bounds
   $: ({ minX, minY, maxX, maxY } = boundsOf(layoutData.nodes));
   
+  // Variables for offset calculation
+  let offsetX = 0;
+  let offsetY = 0;
+  
   // Compute offset to clamp content within viewport with padding
-  $: offsetX = Math.min(0, containerWidth - PADDING - maxX) + Math.max(0, PADDING - minX);
-  $: offsetY = Math.min(0, containerHeight - PADDING - maxY) + Math.max(0, PADDING - minY);
+  $: {
+    const contentWidth = maxX - minX;
+    const contentHeight = maxY - minY;
+    const availableWidth = containerWidth - 2 * PADDING;
+    const availableHeight = containerHeight - 2 * PADDING;
+    
+    // If content fits, center it. If not, clamp to padding boundaries
+    offsetX = contentWidth <= availableWidth 
+      ? (containerWidth - contentWidth) / 2 - minX
+      : Math.min(0, containerWidth - PADDING - maxX) + Math.max(0, PADDING - minX);
+      
+    offsetY = contentHeight <= availableHeight
+      ? (containerHeight - contentHeight) / 2 - minY  
+      : Math.min(0, containerHeight - PADDING - maxY) + Math.max(0, PADDING - minY);
+  }
 
   // Shared occupied areas for edge labels
   let occupiedAreas: { x: number; y: number; w: number; h: number }[] = [];
