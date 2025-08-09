@@ -1,34 +1,31 @@
 <script lang="ts">
 	import { diagramStore } from './stores/diagramStore.js';
 	import { diagramApi } from './api/client/diagramApi.js';
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, afterUpdate, tick } from 'svelte';
 	
 	const dispatch = createEventDispatcher();
 	
 	let prompt = $state('');
-	let isGenerating = $state(false);
+	let loading = $state(false);
 	let showToast = $state(false);
-	let textareaEl: HTMLTextAreaElement;
+	let textarea: HTMLTextAreaElement;
 
 	// Auto-resize textarea
-	$effect(() => {
-		if (textareaEl && prompt) {
-			textareaEl.style.height = 'auto';
-			textareaEl.style.height = Math.min(textareaEl.scrollHeight, 160) + 'px'; // up to 6 lines
+	afterUpdate(() => {
+		if (textarea && prompt) {
+			textarea.style.height = 'auto';
+			textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px'; // up to 6 lines
 		}
 	});
 
-	async function handleSubmit() {
+	async function submit() {
 		const text = prompt.trim();
-		if (!text) {
+		if (!text || loading) {
 			return;
 		}
 
-		if (isGenerating) {
-			return; // Prevent multiple simultaneous requests
-		}
-
-		isGenerating = true;
+		loading = true;
+		await tick(); // ✨ let disabled state render now
 
 		try {
 			console.log('Generating diagram for prompt:', text);
@@ -44,14 +41,14 @@
 			console.error('Error generating diagram:', err);
 			// Don't clear the prompt on error so user can try again
 		} finally {
-			isGenerating = false;
+			loading = false;
 		}
 	}
 
 	function handleKey(e: KeyboardEvent) {
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
-			handleSubmit();
+			submit();
 		}
 	}
 </script>
@@ -61,27 +58,26 @@
 	<div class="pointer-events-auto w-[min(640px,90%)] bg-white/70 dark:bg-gray-900/70
 				backdrop-blur rounded-xl px-4 py-3 flex gap-2 border border-gray-200 dark:border-gray-700">
 		<textarea
-			bind:this={textareaEl}
+			bind:this={textarea}
 			bind:value={prompt}
 			onkeydown={handleKey}
 			rows="2"
 			placeholder="Describe your application architecture…"
+			disabled={loading}
 			class="flex-1 resize-none overflow-y-auto bg-transparent text-gray-900 dark:text-gray-200
-				   placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none min-h-[56px] max-h-[160px]"
+				   placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none min-h-[56px] max-h-[160px]
+				   disabled:opacity-50"
 		></textarea>
 
 		<button
-			onclick={handleSubmit}
+			onclick={submit}
 			class="w-14 h-14 flex items-center justify-center bg-emerald-600
 				   hover:bg-emerald-500 rounded-lg text-2xl disabled:opacity-50"
-			disabled={isGenerating}
+			disabled={loading}
 			aria-label="Generate"
 		>
-			{#if isGenerating}
-				<svg class="animate-spin w-5 h-5" viewBox="0 0 24 24">
-					<circle cx="12" cy="12" r="10"
-							stroke="currentColor" stroke-width="4" fill="none"/>
-				</svg>
+			{#if loading}
+				⏳
 			{:else}
 				🡅
 			{/if}
