@@ -240,6 +240,8 @@
 
         {@const bx = bestPosition.x - (bestPosition.anchor === 'middle' ? textWidth / 2 : bestPosition.anchor === 'end' ? textWidth : 0)}
         {@const by = bestPosition.y - textHeight / 2}
+        {@const textX = bx + textWidth / 2}
+        {@const textY = by + textHeight / 2}
         <line
           x1={x1}
           y1={y1}
@@ -261,11 +263,11 @@
           class="dark:fill-[#202123]"
         />
         <text
-          x={bestPosition.x}
-          y={bestPosition.y}
-          text-anchor={bestPosition.anchor}
-          dy={bestPosition.dy}
-          class="text-[11px] font-semibold fill-gray-700 dark:fill-gray-200 pointer-events-none"
+          x={textX}
+          y={textY}
+          text-anchor="middle"
+          dominant-baseline="central"
+          class="text-[11px] font-semibold fill-gray-700 dark:fill-gray-200 pointer-events-none capitalize"
         >
           {edge.label}
         </text>
@@ -307,7 +309,7 @@
           y={node.y + (node.height || 80) / 2}
           text-anchor="middle"
           dominant-baseline="middle"
-          class="text-sm font-medium fill-gray-700 dark:fill-gray-200"
+          class="text-sm font-medium fill-gray-700 dark:fill-gray-200 capitalize"
         >
           {node.label}
         </text>
@@ -327,7 +329,7 @@
           y={node.y + (node.radius || 50)}
           text-anchor="middle"
           dominant-baseline="middle"
-          class="text-sm font-medium fill-sky-700 dark:fill-sky-200"
+          class="text-sm font-medium fill-sky-700 dark:fill-sky-200 capitalize"
         >
           {node.label}
         </text>
@@ -368,7 +370,7 @@
           y={node.y + (node.height || 80) / 2}
           text-anchor="middle"
           dominant-baseline="middle"
-          class="text-sm font-medium fill-amber-700 dark:fill-amber-200"
+          class="text-sm font-medium fill-amber-700 dark:fill-amber-200 capitalize"
         >
           {node.label}
         </text>
@@ -388,7 +390,7 @@
             y={node.y + (node.height || 60) / 2}
             text-anchor="middle"
             dominant-baseline="middle"
-            class="text-sm font-medium fill-cyan-700 dark:fill-cyan-200"
+            class="text-sm font-medium fill-cyan-700 dark:fill-cyan-200 capitalize"
           >
             {node.label}
           </text>
@@ -406,7 +408,7 @@
             y={node.y + (node.height || 60) / 2}
             text-anchor="middle"
             dominant-baseline="middle"
-            class="text-sm font-medium fill-red-700 dark:fill-red-200"
+            class="text-sm font-medium fill-red-700 dark:fill-red-200 capitalize"
           >
             {node.label}
           </text>
@@ -424,7 +426,7 @@
             y={node.y + (node.height || 60) * 0.67}
             text-anchor="middle"
             dominant-baseline="middle"
-            class="text-sm font-medium fill-green-700 dark:fill-green-200"
+            class="text-sm font-medium fill-green-700 dark:fill-green-200 capitalize"
           >
             {node.label}
           </text>
@@ -446,7 +448,7 @@
             y={node.y + (node.height || 80) / 2}
             text-anchor="middle"
             dominant-baseline="middle"
-            class="text-sm font-medium fill-gray-700 dark:fill-gray-200"
+            class="text-sm font-medium fill-gray-700 dark:fill-gray-200 capitalize"
           >
             {node.label}
           </text>
