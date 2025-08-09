@@ -5,9 +5,11 @@
   import { computeLayout } from './layout.js';
   import { onMount } from 'svelte';
 
-  let containerWidth = 600;
-  let containerHeight = 400;
+  // Use reasonable defaults that won't cause major layout shifts
+  let containerWidth = 1000;
+  let containerHeight = 600;
   let svgElement: SVGElement;
+  let isInitialized = false;
 
   $: data = $diagramStore;
   $: lastUpdated = new Date().toLocaleTimeString();
@@ -200,11 +202,18 @@
       const rect = svgElement.getBoundingClientRect();
       containerWidth = rect.width;
       containerHeight = rect.height;
+      if (!isInitialized) {
+        isInitialized = true;
+      }
     }
   }
 
   onMount(() => {
-    updateContainerSize();
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      updateContainerSize();
+    });
+    
     window.addEventListener('resize', updateContainerSize);
     
     return () => {
@@ -213,8 +222,20 @@
   });
 </script>
 
-<div class="h-full w-full bg-gray-100 dark:bg-gray-900 bg-[radial-gradient(circle_at_1px_1px,rgb(156_163_175)_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,rgb(75_85_99)_1px,transparent_0)] bg-[size:18px_18px]">
-  <svg bind:this={svgElement} class="w-full h-full" viewBox="0 0 {containerWidth} {containerHeight}">
+<div class="h-full w-full bg-gray-100 dark:bg-gray-900 bg-[radial-gradient(circle_at_1px_1px,rgb(156_163_175)_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,rgb(75_85_99)_1px,transparent_0)] bg-[size:18px_18px] relative">
+  <!-- Loading state -->
+  {#if !isInitialized}
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="text-gray-500 dark:text-gray-400 text-sm">Loading diagram...</div>
+    </div>
+  {/if}
+  
+  <!-- SVG content with smooth transition -->
+  <svg 
+    bind:this={svgElement} 
+    class="w-full h-full transition-opacity duration-200 {isInitialized ? 'opacity-100' : 'opacity-0'}" 
+    viewBox="0 0 {containerWidth} {containerHeight}"
+  >
     <g id="diagram" transform="translate({offsetX}, {offsetY})">
       <!-- Render edges first (so they appear behind nodes) -->
     {#each layoutData.edges as edge}
