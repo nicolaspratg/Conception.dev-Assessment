@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { diagramStore } from './stores/diagramStore.js';
 	import { diagramApi } from './api/client/diagramApi.js';
-	import { createEventDispatcher, afterUpdate, tick } from 'svelte';
+	import { createEventDispatcher, tick } from 'svelte';
 	
 	const dispatch = createEventDispatcher();
 	
@@ -11,7 +11,7 @@
 	let textarea: HTMLTextAreaElement;
 
 	// Auto-resize textarea
-	afterUpdate(() => {
+	$effect(() => {
 		if (textarea && prompt) {
 			textarea.style.height = 'auto';
 			textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px'; // up to 6 lines
