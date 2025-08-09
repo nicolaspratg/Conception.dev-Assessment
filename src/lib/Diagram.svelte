@@ -21,26 +21,30 @@
     occupiedAreas = [];
   }
 
-  // Calculate graph centering offsets
-  $: graphBounds = layoutData.nodes.length > 0 ? {
-    minX: Math.min(...layoutData.nodes.map(n => n.type === 'external' ? n.x : n.x)),
-    maxX: Math.max(...layoutData.nodes.map(n => {
-      if (n.type === 'external') {
-        return n.x + (n.radius || 50) * 2;
-      }
-      return n.x + (n.width || 150);
-    })),
-    minY: Math.min(...layoutData.nodes.map(n => n.type === 'external' ? n.y : n.y)),
-    maxY: Math.max(...layoutData.nodes.map(n => {
-      if (n.type === 'external') {
-        return n.y + (n.radius || 50) * 2;
-      }
-      return n.y + (n.height || 80);
-    }))
-  } : { minX: 0, maxX: 0, minY: 0, maxY: 0 };
+  const PADDING = 24;
 
-  $: graphOffsetX = (containerWidth - (graphBounds.maxX - graphBounds.minX)) / 2 - graphBounds.minX;
-  $: graphOffsetY = (containerHeight - (graphBounds.maxY - graphBounds.minY)) / 2 - graphBounds.minY;
+  function boundsOf(nodes: Node[]) {
+    if (nodes.length === 0) {
+      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    }
+    
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const node of nodes) {
+      const bounds = getNodeBounds(node);
+      minX = Math.min(minX, bounds.x);
+      minY = Math.min(minY, bounds.y);
+      maxX = Math.max(maxX, bounds.x + bounds.width);
+      maxY = Math.max(maxY, bounds.y + bounds.height);
+    }
+    return { minX, minY, maxX, maxY };
+  }
+
+  // Calculate graph bounds using actual node bounds
+  $: ({ minX, minY, maxX, maxY } = boundsOf(layoutData.nodes));
+  
+  // Compute offset to clamp content within viewport with padding
+  $: offsetX = Math.min(0, containerWidth - PADDING - maxX) + Math.max(0, PADDING - minX);
+  $: offsetY = Math.min(0, containerHeight - PADDING - maxY) + Math.max(0, PADDING - minY);
 
   // Shared occupied areas for edge labels
   let occupiedAreas: { x: number; y: number; w: number; h: number }[] = [];
@@ -194,7 +198,7 @@
 
 <div class="h-full w-full bg-gray-100 dark:bg-gray-900 bg-[radial-gradient(circle_at_1px_1px,rgb(156_163_175)_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,rgb(75_85_99)_1px,transparent_0)] bg-[size:18px_18px]">
   <svg bind:this={svgElement} class="w-full h-full" viewBox="0 0 {containerWidth} {containerHeight}">
-    <g id="diagram" transform="translate({graphOffsetX}, {graphOffsetY})">
+    <g id="diagram" transform="translate({offsetX}, {offsetY})">
       <!-- Render edges first (so they appear behind nodes) -->
     {#each layoutData.edges as edge}
       {@const sourceNode = getNodeById(edge.source)}
