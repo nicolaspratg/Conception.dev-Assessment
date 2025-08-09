@@ -9,6 +9,9 @@ const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT = 2; // requests per minute
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
 
+// Test-only: fake rate limit for long prompts
+const MAX_PROMPT = 500;
+
 // Zod schema for diagram validation
 const NodeSchema = z.object({
   id: z.string(),
@@ -40,6 +43,14 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     
     if (!prompt || typeof prompt !== 'string') {
       return json({ error: 'Invalid prompt' }, { status: 400 });
+    }
+
+    // Test-only: fake 429 for long prompts
+    if (env.FAKE_RATE_LIMIT === '1' && typeof prompt === 'string' && prompt.length > MAX_PROMPT) {
+      return new Response(JSON.stringify({ error: 'Prompt too long' }), { 
+        status: 429,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const OPENAI_API_KEY = env.OPENAI_API_KEY;

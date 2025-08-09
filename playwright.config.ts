@@ -21,5 +21,8 @@ export default defineConfig({
     command: 'npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
+    env: {
+      FAKE_RATE_LIMIT: '1', // Enable fake rate limiting for E2E tests
+    },
   },
 }); 

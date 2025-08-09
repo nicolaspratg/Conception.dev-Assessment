@@ -5,7 +5,8 @@ export default defineConfig({
     include: [
       'src/**/*.{test,spec}.{js,ts}',
       'tests/unit/**/*.{test,spec}.{js,ts}',
-      'tests/api/**/*.{test,spec}.{js,ts}'
+      'tests/api/**/*.{test,spec}.{js,ts}',
+      'tests/audit/**/*.{test,spec}.{js,ts}'
     ],
     exclude: [
       'tests/e2e/**/*.{test,spec}.{js,ts}'
