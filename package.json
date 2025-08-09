@@ -13,7 +13,7 @@
 		"test": "vitest",
 		"test:ui": "vitest --ui",
 		"test:e2e": "playwright test",
-		"audit": "npm run build && npm test -- tests/audit && npm run test:e2e -- tests/audit"
+		"audit": "npm run build && npm test && npm run test:e2e -- tests/audit"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.54.2",

@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { z } from 'zod';
 import { env } from '$env/dynamic/private';
-import exampleDiagramData from '$lib/diagram/example-diagram.json';
+import exampleDiagramData from '$lib/diagram/example-diagram.json' with { type: "json" };
 
 // Simple rate limiting (in production, use Redis or similar)
 const requestCounts = new Map<string, { count: number; resetTime: number }>();

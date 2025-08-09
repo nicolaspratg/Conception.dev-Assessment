@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import diagramData from '$lib/diagram/example-diagram.json';
+import diagramData from '$lib/diagram/example-diagram.json' with { type: "json" };
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
