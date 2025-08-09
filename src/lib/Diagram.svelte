@@ -1,70 +1,60 @@
 <script lang="ts">
-  import { SHAPES, type ShapeType } from './diagram/constants.js';
-  import { diagramStore } from './stores/diagramStore.js';
-  import type { DiagramData, Node } from './types/diagram.js';
-  import { computeLayout } from './layout.js';
+  import { computeLayout } from './layout';
+  import { diagramStore } from './stores/diagramStore';
+  import type { Node } from './types/diagram';
   import { onMount } from 'svelte';
 
-  // Use reasonable defaults that won't cause major layout shifts
-  let containerWidth = 1000;
-  let containerHeight = 600;
-  let svgElement: SVGElement;
-  let isInitialized = false;
+  let svgEl: SVGSVGElement;
+  let containerWidth = 1000, containerHeight = 600;
+
+  // zoom/pan
+  let scale = 1, panX = 0, panY = 0, hasInteracted = false;
+  const SCALE_MIN = 0.5, SCALE_MAX = 3;
+
+  // measure prompt bar height for initial safe-fit
+  let promptBarHeight = 0;
+  function measurePromptBar() {
+    if (typeof document !== 'undefined') {
+      const el = document.getElementById('prompt-bar');
+      promptBarHeight = el ? el.offsetHeight : 0;
+    }
+  }
+
+  // responsive orientation
+  function currentRankdir(): 'LR' | 'TB' {
+    // favor horizontal when viewport is wide
+    const wide = containerWidth >= 900 || containerWidth > containerHeight * 1.2;
+    return wide ? 'LR' : 'TB';
+  }
 
   $: data = $diagramStore;
-  $: lastUpdated = new Date().toLocaleTimeString();
-  $: layoutData = computeLayout(data.nodes, data.edges, containerWidth, containerHeight);
-
-  // Layout data now includes automatically positioned labels from dagre
-
-  const PADDING = 24;
-
-  function boundsOf(nodes: Node[]) {
-    if (nodes.length === 0) {
-      return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
-    }
-    
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    for (const node of nodes) {
-      const bounds = getNodeBounds(node);
-      minX = Math.min(minX, bounds.x);
-      minY = Math.min(minY, bounds.y);
-      maxX = Math.max(maxX, bounds.x + bounds.width);
-      maxY = Math.max(maxY, bounds.y + bounds.height);
-    }
-    return { minX, minY, maxX, maxY };
-  }
-
-  // Calculate graph bounds using actual node bounds
-  $: ({ minX, minY, maxX, maxY } = boundsOf(layoutData.nodes));
-  
-  // Variables for offset calculation
-  let offsetX = 0;
-  let offsetY = 0;
-  
-  // Compute offset to clamp content within viewport with padding
-  $: {
-    const contentWidth = maxX - minX;
-    const contentHeight = maxY - minY;
-    const availableWidth = containerWidth - 2 * PADDING;
-    const availableHeight = containerHeight - 2 * PADDING;
-    
-    // If content fits, center it. If not, clamp to padding boundaries
-    offsetX = contentWidth <= availableWidth 
-      ? (containerWidth - contentWidth) / 2 - minX
-      : Math.min(0, containerWidth - PADDING - maxX) + Math.max(0, PADDING - minX);
-      
-    offsetY = contentHeight <= availableHeight
-      ? (containerHeight - contentHeight) / 2 - minY  
-      : Math.min(0, containerHeight - PADDING - maxY) + Math.max(0, PADDING - minY);
-  }
-
-  // Note: Label collision detection is now handled automatically by dagre!
-
-  // Manual collision detection removed - dagre handles this automatically!
+  $: layoutNodes = computeLayout(data.nodes, data.edges, containerWidth, containerHeight,
+                                 { rankdir: currentRankdir() });
+  $: layoutData = { nodes: layoutNodes, edges: data.edges };
 
   function getNodeById(id: string): Node | undefined {
     return layoutData.nodes.find(node => node.id === id);
+  }
+
+  function getNodeBounds(n: Node) {
+    if (n.type === 'external' && n.radius) {
+      const d = (n.radius ?? 50) * 2;
+      return { x: n.x, y: n.y, width: d, height: d };
+    }
+    return { x: n.x, y: n.y, width: n.width ?? 150, height: n.height ?? 80 };
+  }
+
+  function contentBounds(nodes: Node[]) {
+    let minX=Infinity,minY=Infinity,maxX=-Infinity,maxY=-Infinity;
+    for (const n of nodes) {
+      const b = getNodeBounds(n);
+      minX = Math.min(minX, b.x);
+      minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.width);
+      maxY = Math.max(maxY, b.y + b.height);
+    }
+    if (!nodes.length) return { minX:0,minY:0,maxX:0,maxY:0 };
+    return { minX, minY, maxX, maxY };
   }
 
   function getNodeCenter(node: Node): { x: number; y: number } {
@@ -80,20 +70,119 @@
     };
   }
 
-  function getNodeBounds(node: Node): { x: number; y: number; width: number; height: number } {
-    if (node.type === 'external' && node.radius) {
-      const r = node.radius || 50;
-      return { x: node.x, y: node.y, width: r * 2, height: r * 2 };
-    }
-    return {
-      x: node.x,
-      y: node.y,
-      width: node.width || 150,
-      height: node.height || 80
-    };
+  function fitToScreen(withSafeZone: boolean) {
+    const PADDING = 24;
+    const { minX, minY, maxX, maxY } = contentBounds(layoutData.nodes);
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+
+    const padTop = PADDING, padLeft = PADDING, padRight = PADDING;
+    const padBottom = withSafeZone ? PADDING + promptBarHeight + 16 : PADDING;
+
+    const availW = containerWidth  - (padLeft + padRight);
+    const availH = containerHeight - (padTop  + padBottom);
+
+    const s = Math.min(1, Math.min(availW / contentW, availH / contentH));
+    scale = Number.isFinite(s) && s > 0 ? Math.max(SCALE_MIN, Math.min(SCALE_MAX, s)) : 1;
+
+    // center after scaling
+    const scaledW = contentW * scale, scaledH = contentH * scale;
+    const targetX = padLeft + (availW - scaledW) / 2;
+    const targetY = padTop  + (availH - scaledH) / 2;
+
+    panX = targetX - minX * scale;
+    panY = targetY - minY * scale;
   }
 
+  function updateContainerSize() {
+    if (typeof document === 'undefined' || !svgEl) return;
+    const r = svgEl.getBoundingClientRect();
+    containerWidth = r.width; containerHeight = r.height;
+  }
 
+  // zoom helpers
+  function zoomTo(cx: number, cy: number, factor: number) {
+    const newScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, scale * factor));
+    const k = newScale / scale;
+    // keep cursor point stable: adjust pan so (cx,cy) stays put
+    panX = cx - k * (cx - panX);
+    panY = cy - k * (cy - panY);
+    scale = newScale;
+  }
+
+  function onWheel(e: WheelEvent) {
+    e.preventDefault();
+    hasInteracted = true;
+    const rect = svgEl.getBoundingClientRect();
+    const cx = e.clientX - rect.left;
+    const cy = e.clientY - rect.top;
+    const factor = Math.exp(-(e.deltaY) * 0.0015);
+    zoomTo(cx, cy, factor);
+  }
+
+  // pan (mouse & touch)
+  let dragging = false, lastX = 0, lastY = 0, pointers = new Map<number,{x:number,y:number}>();
+  function onPointerDown(e: PointerEvent) {
+    (e.target as Element).setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 1) { dragging = true; lastX = e.clientX; lastY = e.clientY; }
+    hasInteracted = true;
+  }
+  function onPointerMove(e: PointerEvent) {
+    const prev = pointers.get(e.pointerId);
+    if (prev) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // pinch zoom when 2 pointers
+    if (pointers.size === 2) {
+      const [a,b] = [...pointers.values()];
+      const distNow = Math.hypot(a.x - b.x, a.y - b.y);
+      const distPrev = Math.hypot((prev?.x ?? a.x) - b.x, (prev?.y ?? a.y) - b.y);
+      if (distPrev > 0) {
+        const rect = svgEl.getBoundingClientRect();
+        const cx = (a.x + b.x)/2 - rect.left;
+        const cy = (a.y + b.y)/2 - rect.top;
+        zoomTo(cx, cy, distNow / distPrev);
+      }
+      return;
+    }
+
+    if (dragging) {
+      panX += (e.clientX - lastX);
+      panY += (e.clientY - lastY);
+      lastX = e.clientX; lastY = e.clientY;
+    }
+  }
+  function onPointerUp(e: PointerEvent) {
+    pointers.delete(e.pointerId);
+    if (pointers.size === 0) dragging = false;
+  }
+
+  // buttons
+  function zoomIn()  { hasInteracted = true; const r = svgEl.getBoundingClientRect(); zoomTo(r.width/2, r.height/2, 1.1); }
+  function zoomOut() { hasInteracted = true; const r = svgEl.getBoundingClientRect(); zoomTo(r.width/2, r.height/2, 1/1.1); }
+  function resetView() { hasInteracted = false; measurePromptBar(); fitToScreen(true); }
+
+  onMount(() => {
+    updateContainerSize();
+    measurePromptBar();
+    // initial safe-fit (do not overlap prompt bar)
+    fitToScreen(true);
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', () => {
+        updateContainerSize();
+        measurePromptBar();
+        // if user has interacted, keep current pan/zoom; otherwise re-fit with safe-zone
+        if (!hasInteracted) fitToScreen(true);
+      });
+    }
+  });
+
+  // re-fit when layout changes and user hasn't interacted yet
+  $: if (layoutData && !hasInteracted) {
+    measurePromptBar();
+    fitToScreen(true);
+  }
 
   function rectIntersection(p: { x: number; y: number }, rect: { x: number; y: number; width: number; height: number }): { x: number; y: number } {
     const centerX = rect.x + rect.width / 2;
@@ -156,46 +245,22 @@
     return { x1, y1, x2, y2 };
   }
 
-  function updateContainerSize() {
-    if (svgElement) {
-      const rect = svgElement.getBoundingClientRect();
-      containerWidth = rect.width;
-      containerHeight = rect.height;
-      if (!isInitialized) {
-        isInitialized = true;
-      }
-    }
-  }
 
-  onMount(() => {
-    // Use requestAnimationFrame to ensure DOM is ready
-    requestAnimationFrame(() => {
-      updateContainerSize();
-    });
-    
-    window.addEventListener('resize', updateContainerSize);
-    
-    return () => {
-      window.removeEventListener('resize', updateContainerSize);
-    };
-  });
 </script>
 
-<div class="h-full w-full bg-gray-100 dark:bg-gray-900 bg-[radial-gradient(circle_at_1px_1px,rgb(156_163_175)_1px,transparent_0)] dark:bg-[radial-gradient(circle_at_1px_1px,rgb(75_85_99)_1px,transparent_0)] bg-[size:18px_18px] relative">
-  <!-- Loading state -->
-  {#if !isInitialized}
-    <div class="absolute inset-0 flex items-center justify-center">
-      <div class="text-gray-500 dark:text-gray-400 text-sm">Loading diagram...</div>
-    </div>
-  {/if}
-  
-  <!-- SVG content with smooth transition -->
-  <svg 
-    bind:this={svgElement} 
-    class="w-full h-full transition-opacity duration-200 {isInitialized ? 'opacity-100' : 'opacity-0'}" 
-    viewBox="0 0 {containerWidth} {containerHeight}"
-  >
-    <g id="diagram" transform="translate({offsetX}, {offsetY})">
+<div class="h-full w-full bg-gray-100 dark:bg-gray-900 
+            bg-[radial-gradient(circle_at_1px_1px,rgb(156_163_175)_1px,transparent_0)] 
+            dark:bg-[radial-gradient(circle_at_1px_1px,rgb(75_85_99)_1px,transparent_0)] 
+            bg-[size:18px_18px] touch-none">
+  <svg bind:this={svgEl}
+       class="w-full h-full"
+       viewBox={`0 0 ${containerWidth} ${containerHeight}`}
+       on:wheel={onWheel}
+       on:pointerdown={onPointerDown}
+       on:pointermove={onPointerMove}
+       on:pointerup={onPointerUp}
+       on:pointercancel={onPointerUp}>
+    <g id="diagram" transform={`translate(${panX},${panY}) scale(${scale})`}>
 
       <!-- EDGES -->
       <g id="edges">
@@ -203,8 +268,14 @@
           {@const sourceNode = getNodeById(edge.source)}
           {@const targetNode = getNodeById(edge.target)}
           {#if sourceNode && targetNode}
+            {@const PAD = 8}
             {@const { x1, y1, x2, y2 } = getIntersection(sourceNode, targetNode)}
-            <line x1={x1} y1={y1} x2={x2} y2={y2}
+            {@const dx = x2 - x1}
+            {@const dy = y2 - y1}
+            {@const length = Math.sqrt(dx * dx + dy * dy)}
+            {@const ux = dx / length}
+            {@const uy = dy / length}
+            <line x1={x1 + ux * PAD} y1={y1 + uy * PAD} x2={x2 - ux * PAD} y2={y2 - uy * PAD}
                   stroke-width="2" marker-end="url(#arrow)"
                   class="stroke-gray-400 dark:stroke-gray-600"/>
           {/if}
@@ -395,24 +466,30 @@
         {/each}
       </g>
 
-      <!-- LABELS (positioned automatically by dagre) -->
+      <!-- LABELS -->
       <g id="labels" class="pointer-events-none">
         {#each layoutData.edges as edge}
-          {#if edge.labelPos}
-            {@const labelPos = edge.labelPos}
+          {@const sourceNode = getNodeById(edge.source)}
+          {@const targetNode = getNodeById(edge.target)}
+          {#if sourceNode && targetNode && edge.label}
+            {@const { x1, y1, x2, y2 } = getIntersection(sourceNode, targetNode)}
+            {@const midX = (x1 + x2) / 2}
+            {@const midY = (y1 + y2) / 2}
+            {@const labelWidth = Math.max(edge.label.length * 7, 40)}
+            {@const labelHeight = 20}
             <rect 
-              x={labelPos.x - labelPos.width/2 - 2} 
-              y={labelPos.y - labelPos.height/2 - 2} 
-              width={labelPos.width + 4} 
-              height={labelPos.height + 4}
+              x={midX - labelWidth/2 - 2} 
+              y={midY - labelHeight/2 - 2} 
+              width={labelWidth + 4} 
+              height={labelHeight + 4}
               rx="3" 
               fill="white" 
               opacity="0.9"
               class="dark:fill-[#202123]"
             />
             <text 
-              x={labelPos.x} 
-              y={labelPos.y}
+              x={midX} 
+              y={midY}
               text-anchor="middle" 
               dominant-baseline="central"
               class="text-[11px] font-semibold fill-gray-700 dark:fill-gray-200 capitalize"
@@ -424,4 +501,11 @@
       </g>
     </g>
   </svg>
+
+  <!-- Zoom controls -->
+  <div class="absolute top-4 right-4 z-40 flex flex-col gap-2">
+    <button class="w-9 h-9 rounded bg-gray-800/70 text-white hover:bg-gray-700/70 transition-colors flex items-center justify-center" on:click={zoomIn}>＋</button>
+    <button class="w-9 h-9 rounded bg-gray-800/70 text-white hover:bg-gray-700/70 transition-colors flex items-center justify-center" on:click={zoomOut}>－</button>
+    <button class="w-9 h-9 rounded bg-gray-800/70 text-white hover:bg-gray-700/70 transition-colors flex items-center justify-center" on:click={resetView}>⟲</button>
+  </div>
 </div> 

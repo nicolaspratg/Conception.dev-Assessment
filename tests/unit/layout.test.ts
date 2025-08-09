@@ -15,13 +15,12 @@ describe('computeLayout', () => {
       { id: 'e2', source: '2', target: '3', label: 'Connection 2' }
     ];
     
-    const result = computeLayout(nodes, edges);
+    const result = computeLayout(nodes, edges, 800, 600);
     
-    expect(result.nodes).toHaveLength(3);
-    expect(result.edges).toHaveLength(2);
+    expect(result).toHaveLength(3);
     
     // Check that nodes are positioned (not all at 0,0)
-    const positions = result.nodes.map(n => ({ x: n.x, y: n.y }));
+    const positions = result.map(n => ({ x: n.x, y: n.y }));
     const uniquePositions = new Set(positions.map(p => `${p.x},${p.y}`));
     expect(uniquePositions.size).toBeGreaterThan(1);
   });
@@ -38,17 +37,17 @@ describe('computeLayout', () => {
       { id: 'e2', source: '2', target: '3', label: 'Query' }
     ];
     
-    const result = computeLayout(nodes, edges);
+    const result = computeLayout(nodes, edges, 800, 600);
     
-    expect(result.nodes[0].width).toBe(150); // component
-    expect(result.nodes[0].height).toBe(80);
-    expect(result.nodes[1].width).toBe(100); // external
-    expect(result.nodes[1].height).toBe(100);
-    expect(result.nodes[2].width).toBe(120); // datastore
-    expect(result.nodes[2].height).toBe(90);
+    expect(result[0].width).toBe(150); // component
+    expect(result[0].height).toBe(80);
+    expect(result[1].width).toBe(100); // external
+    expect(result[1].height).toBe(100);
+    expect(result[2].width).toBe(120); // datastore
+    expect(result[2].height).toBe(90);
   });
 
-  it('should automatically position edge labels using dagre', () => {
+  it('should return nodes with proper positioning', () => {
     const nodes: Node[] = [
       { id: '1', type: 'component', label: 'Source', x: 0, y: 0 },
       { id: '2', type: 'component', label: 'Target', x: 0, y: 0 }
@@ -58,14 +57,13 @@ describe('computeLayout', () => {
       { id: 'e1', source: '1', target: '2', label: 'Connection' }
     ];
     
-    const result = computeLayout(nodes, edges);
+    const result = computeLayout(nodes, edges, 800, 600);
     
-    // Verify edges have automatic label positioning
-    expect(result.edges).toHaveLength(1);
-    expect(result.edges[0].labelPos).toBeDefined();
-    expect(result.edges[0].labelPos.x).toBeTypeOf('number');
-    expect(result.edges[0].labelPos.y).toBeTypeOf('number');
-    expect(result.edges[0].labelPos.width).toBeGreaterThan(0);
-    expect(result.edges[0].labelPos.height).toBeGreaterThan(0);
+    // Verify nodes have proper positioning and dimensions
+    expect(result).toHaveLength(2);
+    expect(result[0].x).toBeTypeOf('number');
+    expect(result[0].y).toBeTypeOf('number');
+    expect(result[0].width).toBeGreaterThan(0);
+    expect(result[0].height).toBeGreaterThan(0);
   });
 });

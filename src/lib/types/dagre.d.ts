@@ -4,7 +4,7 @@ declare module 'dagre' {
     setDefaultEdgeLabel(fn: () => any): Graph;
     setNode(id: string, node: { width: number; height: number }): Graph;
     setEdge(source: string, target: string): Graph;
-    node(id: string): { x: number; y: number };
+    node(id: string): { x: number; y: number; width: number; height: number };
   }
 
   export interface GraphLib {

@@ -53,10 +53,8 @@
 	}
 </script>
 
-<!-- Outer anchor keeps bar centred and visible -->
-<div class="absolute inset-x-0 bottom-6 flex justify-center z-50 pointer-events-none">
-	<div class="pointer-events-auto w-[min(640px,90%)] bg-white/70 dark:bg-gray-900/70
-				backdrop-blur rounded-xl px-4 py-3 flex gap-2 border border-gray-200 dark:border-gray-700">
+<!-- The positioning is now handled by the parent layout -->
+<div class="bg-white/70 dark:bg-gray-900/70 backdrop-blur rounded-xl px-4 py-3 flex gap-2 border border-gray-200 dark:border-gray-700">
 		<textarea
 			bind:this={textarea}
 			bind:value={prompt}
@@ -82,7 +80,6 @@
 				🡅
 			{/if}
 		</button>
-	</div>
 </div>
 
 {#if showToast}

@@ -43,8 +43,15 @@
 	</header>
 
 	<!-- Main Content Area -->
-	<div class="flex-1 relative overflow-hidden">
+	<div id="diagram-root" class="relative flex-1 overflow-hidden">
 		{@render children?.()}
-		<PromptBar />
+		<!-- PromptBar positioning -->
+		<div
+			id="prompt-bar"
+			class="pointer-events-none z-50 absolute inset-x-0 bottom-6 flex justify-center">
+			<div class="pointer-events-auto w-[min(640px,92%)]">
+				<PromptBar />
+			</div>
+		</div>
 	</div>
 </div>
