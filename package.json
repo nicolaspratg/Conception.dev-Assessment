@@ -36,6 +36,7 @@
 		"vitest": "^2.1.9"
 	},
 	"dependencies": {
+		"@panzoom/panzoom": "^4.6.0",
 		"dagre": "^0.8.5",
 		"svelte-hero-icons": "^5.2.0",
 		"zod": "^4.0.15"

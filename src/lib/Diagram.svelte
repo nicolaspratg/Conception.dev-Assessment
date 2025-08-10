@@ -3,13 +3,41 @@
   import { diagramStore } from './stores/diagramStore';
   import type { Node } from './types/diagram';
   import { onMount, onDestroy } from 'svelte';
+  let Panzoom: any;
 
-  let svgEl: SVGSVGElement;
+  let svgElement: SVGSVGElement;
+  let diagramGroup: SVGGElement;
   let containerWidth = 1000, containerHeight = 600;
 
   // zoom/pan
-  let scale = 1, panX = 0, panY = 0, hasInteracted = false;
-  const SCALE_MIN = 0.5, SCALE_MAX = 3;
+  let hasInteracted = false;
+  let curX = 0, curY = 0, curScale = 1; // live transform cache
+  const MIN_SCALE = 0.5;
+  const MAX_SCALE = 3;
+  let pz: any = null;
+
+  function clamp(v: number, lo: number, hi: number) {
+    return Math.min(hi, Math.max(lo, v));
+  }
+
+  // UX polish: hide diagram until initial fit is applied
+  let initialFitDone = false;
+  let svgReady = false; // controls opacity/visibility of the SVG
+
+  // Calculate initial position when we have data AND measurements
+  $: if (layoutData?.nodes?.length && measurementsReady && !initialFitDone) {
+    const t = getFitTransform(true);
+    curX = t.x;
+    curY = t.y;
+    curScale = t.scale;
+  }
+
+  function showSvgOnceFitted() {
+    if (!initialFitDone) return;
+    if (!svgReady) {
+      svgReady = true; // triggers CSS to reveal
+    }
+  }
 
   // measurement gating for initial fit
   let promptBarHeight = 0;
@@ -36,11 +64,7 @@
     measurementsReady = containerMeasured && barMeasured;
   }
 
-  function refitIfAllowed() {
-    if (layoutData?.nodes?.length && measurementsReady && !hasInteracted) {
-      fitToScreen(true); // includes bottom safe-zone
-    }
-  }
+
 
   // responsive orientation
   function currentRankdir(): 'LR' | 'TB' {
@@ -92,99 +116,170 @@
     };
   }
 
-  function fitToScreen(withSafeZone: boolean) {
+  // Return the transform that fits content with optional bottom safe zone
+  function getFitTransform(withSafeZone: boolean) {
     const PADDING = 24;
+    const BOTTOM_RESERVE = 40;
     const { minX, minY, maxX, maxY } = contentBounds(layoutData.nodes);
-    const contentW = maxX - minX;
-    const contentH = maxY - minY;
 
     const padTop = PADDING, padLeft = PADDING, padRight = PADDING;
-    const padBottom = withSafeZone ? PADDING + promptBarHeight + 16 : PADDING;
+    const measuredBar = Math.max(promptBarHeight, 72);
+    const extraBottom = withSafeZone ? (measuredBar + BOTTOM_RESERVE) : 0;
+    const padBottom = PADDING + extraBottom;
 
     const availW = containerWidth  - (padLeft + padRight);
     const availH = containerHeight - (padTop  + padBottom);
 
-    const s = Math.min(1, Math.min(availW / contentW, availH / contentH));
-    scale = Number.isFinite(s) && s > 0 ? Math.max(SCALE_MIN, Math.min(SCALE_MAX, s)) : 1;
+    const contentW = Math.max(1, maxX - minX);
+    const contentH = Math.max(1, maxY - minY);
 
-    // center after scaling
-    const scaledW = contentW * scale, scaledH = contentH * scale;
+    const scale = Math.min(1, Math.min(availW / contentW, availH / contentH));
+    const clamped = Math.min(MAX_SCALE, Math.max(MIN_SCALE, Number.isFinite(scale) ? scale : 1));
+
+    const scaledW = contentW * clamped, scaledH = contentH * clamped;
     const targetX = padLeft + (availW - scaledW) / 2;
     const targetY = padTop  + (availH - scaledH) / 2;
 
-    panX = targetX - minX * scale;
-    panY = targetY - minY * scale;
+    const x = targetX - minX * clamped;
+    const y = targetY - minY * clamped;
+
+    return { x, y, scale: clamped };
+  }
+
+  function applyTransform(x: number, y: number, scale: number, animate = false) {
+    curX = x; curY = y; curScale = scale;          // update cache first
+    if (pz) {
+      try {
+        // Use absolute zoom + pan (order matters)
+        pz.zoom(scale, { animate });
+        pz.pan(x, y, { animate });
+      } catch {
+        diagramGroup?.setAttribute('transform', `translate(${x}, ${y}) scale(${scale})`);
+      }
+    } else {
+      diagramGroup?.setAttribute('transform', `translate(${x}, ${y}) scale(${scale})`);
+    }
+  }
+
+  // Called by Reset button and on first render (when measurements ready)
+  function fitToScreen(withSafeZone: boolean, animate = false) {
+    const t = getFitTransform(withSafeZone);
+    applyTransform(t.x, t.y, t.scale, animate);
   }
 
   function updateContainerSize() {
-    if (typeof document === 'undefined' || !svgEl) return;
-    const r = svgEl.getBoundingClientRect();
+    if (typeof document === 'undefined' || !svgElement) return;
+    const r = svgElement.getBoundingClientRect();
     containerWidth = r.width; containerHeight = r.height;
   }
 
-  // zoom helpers
-  function zoomTo(cx: number, cy: number, factor: number) {
-    const newScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, scale * factor));
-    const k = newScale / scale;
-    // keep cursor point stable: adjust pan so (cx,cy) stays put
-    panX = cx - k * (cx - panX);
-    panY = cy - k * (cy - panY);
-    scale = newScale;
-  }
-
-  function onWheel(e: WheelEvent) {
+  function onWheelCentered(e: WheelEvent) {
+    if (!svgElement) return;
+    hasInteracted = true;
     e.preventDefault();
-    hasInteracted = true;
-    const rect = svgEl.getBoundingClientRect();
-    const cx = e.clientX - rect.left;
-    const cy = e.clientY - rect.top;
-    const factor = Math.exp(-(e.deltaY) * 0.0015);
-    zoomTo(cx, cy, factor);
+
+    // Zoom factor from deltaY (works for mouse + trackpad)
+    const factor = Math.exp(-e.deltaY * 0.0015);
+
+    const rect = svgElement.getBoundingClientRect();
+    // Center of the SVG in *local* coords
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+
+    // Convert that center to world coords using current transform
+    const wx = (cx - curX) / curScale;
+    const wy = (cy - curY) / curScale;
+
+    const nextScale = clamp(curScale * factor, MIN_SCALE, MAX_SCALE);
+    const nextX = cx - wx * nextScale;
+    const nextY = cy - wy * nextScale;
+
+    applyTransform(nextX, nextY, nextScale, false);
   }
 
-  // pan (mouse & touch)
-  let dragging = false, lastX = 0, lastY = 0, pointers = new Map<number,{x:number,y:number}>();
-  function onPointerDown(e: PointerEvent) {
-    (e.target as Element).setPointerCapture(e.pointerId);
-    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.size === 1) { dragging = true; lastX = e.clientX; lastY = e.clientY; }
-    hasInteracted = true;
-  }
-  function onPointerMove(e: PointerEvent) {
-    const prev = pointers.get(e.pointerId);
-    if (prev) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  function initPanzoom() {
+    if (!diagramGroup || pz) return;
 
-    // pinch zoom when 2 pointers
-    if (pointers.size === 2) {
-      const [a,b] = [...pointers.values()];
-      const distNow = Math.hypot(a.x - b.x, a.y - b.y);
-      const distPrev = Math.hypot((prev?.x ?? a.x) - b.x, (prev?.y ?? a.y) - b.y);
-      if (distPrev > 0) {
-        const rect = svgEl.getBoundingClientRect();
-        const cx = (a.x + b.x)/2 - rect.left;
-        const cy = (a.y + b.y)/2 - rect.top;
-        zoomTo(cx, cy, distNow / distPrev);
+    pz = Panzoom(diagramGroup, {
+      maxScale: MAX_SCALE,
+      minScale: MIN_SCALE,
+      step: 0.2,
+      animate: true,
+      duration: 180,
+      setTransform: (elem: SVGGElement, { x, y, scale }: { x: number; y: number; scale: number }) => {
+        curX = x; curY = y; curScale = scale;         // <- keep cache in sync
+        elem.setAttribute('transform', `translate(${x}, ${y}) scale(${scale})`);
       }
-      return;
-    }
+    });
 
-    if (dragging) {
-      panX += (e.clientX - lastX);
-      panY += (e.clientY - lastY);
-      lastX = e.clientX; lastY = e.clientY;
+    // Mark interaction on any gesture start (stops re-fit mid-zoom)
+    diagramGroup.addEventListener('panzoomstart', () => { hasInteracted = true; }, { passive: true });
+
+    // Center-anchored wheel zoom (no XY drift)
+    svgElement.addEventListener('wheel', onWheelCentered, { passive: false });
+
+    // Make the surface capture touch gestures
+    svgElement.style.touchAction = 'none';
+    (svgElement.style as any)['overscrollBehavior'] = 'contain';
+
+    // Micro-perf: smoother transforms
+    (diagramGroup.style as any).willChange = 'transform';
+  }
+
+  // Measurement gating you already have:
+  // - containerMeasured, barMeasured, measurementsReady, !hasInteracted
+  // After measuring, do:
+  function refitIfAllowed() {
+    if (layoutData?.nodes?.length && measurementsReady && !hasInteracted) {
+      initPanzoom();
+      const t = getFitTransform(true);
+      applyTransform(t.x, t.y, t.scale, false);
+      initialFitDone = true;
+      // Show SVG after a brief delay to ensure transform is applied
+      requestAnimationFrame(() => {
+        svgReady = true;
+      });
     }
   }
-  function onPointerUp(e: PointerEvent) {
-    pointers.delete(e.pointerId);
-    if (pointers.size === 0) dragging = false;
+
+  function zoomBy(mult: number, animate = true) {
+    if (!svgElement) return;
+    hasInteracted = true;
+
+    const rect = svgElement.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+
+    const wx = (cx - curX) / curScale;
+    const wy = (cy - curY) / curScale;
+
+    const nextScale = clamp(curScale * mult, MIN_SCALE, MAX_SCALE);
+    const nextX = cx - wx * nextScale;
+    const nextY = cy - wy * nextScale;
+
+    applyTransform(nextX, nextY, nextScale, animate);
   }
 
-  // buttons
-  function zoomIn()  { hasInteracted = true; const r = svgEl.getBoundingClientRect(); zoomTo(r.width/2, r.height/2, 1.1); }
-  function zoomOut() { hasInteracted = true; const r = svgEl.getBoundingClientRect(); zoomTo(r.width/2, r.height/2, 1/1.1); }
-  function resetView() { hasInteracted = false; refitIfAllowed(); }
+  // For +/- buttons in your UI:
+  function zoomIn()  { zoomBy(1.2); }
+  function zoomOut() { zoomBy(1/1.2); }
+  function resetView() {
+    hasInteracted = false;
+    const t = getFitTransform(true);
+    applyTransform(t.x, t.y, t.scale, true);
+    initialFitDone = true;
+    requestAnimationFrame(() => {
+      svgReady = true;
+    });
+  }
 
-  onMount(() => {
+  onMount(async () => {
+    // Dynamic import to avoid SSR issues
+    if (typeof window !== 'undefined') {
+      const panzoomModule = await import('@panzoom/panzoom');
+      Panzoom = panzoomModule.default;
+    }
+
     // Initial measurements
     measureContainer();
     measurePromptBar();
@@ -207,11 +302,22 @@
         refitIfAllowed();
       });
     }
+
+    // Ensure initial fit happens after a short delay to allow DOM to be ready
+    setTimeout(() => {
+      if (layoutData?.nodes?.length && !hasInteracted) {
+        refitIfAllowed();
+      }
+    }, 100);
   });
 
   onDestroy(() => {
     if (barRO) {
       barRO.disconnect();
+    }
+    if (pz) {
+      svgElement?.removeEventListener('wheel', onWheelCentered as any);
+      pz = null;
     }
   });
 
@@ -288,15 +394,15 @@
             bg-[radial-gradient(circle_at_1px_1px,rgb(156_163_175)_1px,transparent_0)] 
             dark:bg-[radial-gradient(circle_at_1px_1px,rgb(75_85_99)_1px,transparent_0)] 
             bg-[size:18px_18px] touch-none">
-  <svg bind:this={svgEl}
-       class="w-full h-full"
-       viewBox={`0 0 ${containerWidth} ${containerHeight}`}
-       on:wheel={onWheel}
-       on:pointerdown={onPointerDown}
-       on:pointermove={onPointerMove}
-       on:pointerup={onPointerUp}
-       on:pointercancel={onPointerUp}>
-    <g id="diagram" transform={`translate(${panX},${panY}) scale(${scale})`}>
+  <svg bind:this={svgElement}
+       class="w-full h-full transition-opacity duration-150"
+       class:opacity-0={!svgReady}
+       style="overscroll-behavior: contain"
+       viewBox={`0 0 ${containerWidth} ${containerHeight}`}>
+    <!-- IMPORTANT: panzoom attaches to this group -->
+    <g id="diagram" bind:this={diagramGroup} transform={`translate(${curX},${curY}) scale(${curScale})`}>
+      <!-- Transparent hit-rect so gestures always hit the group -->
+      <rect x="0" y="0" width={containerWidth} height={containerHeight} fill="transparent" />
 
       <!-- EDGES -->
       <g id="edges">
