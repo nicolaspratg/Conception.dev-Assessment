@@ -2,7 +2,7 @@
   import { computeLayout } from './layout';
   import { diagramStore } from './stores/diagramStore';
   import type { Node } from './types/diagram';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
 
   let svgEl: SVGSVGElement;
   let containerWidth = 1000, containerHeight = 600;
@@ -11,12 +11,34 @@
   let scale = 1, panX = 0, panY = 0, hasInteracted = false;
   const SCALE_MIN = 0.5, SCALE_MAX = 3;
 
-  // measure prompt bar height for initial safe-fit
+  // measurement gating for initial fit
   let promptBarHeight = 0;
+  let containerMeasured = false;
+  let barMeasured = false;
+  let measurementsReady = false;
+  let barRO: ResizeObserver;
+
   function measurePromptBar() {
-    if (typeof document !== 'undefined') {
-      const el = document.getElementById('prompt-bar');
-      promptBarHeight = el ? el.offsetHeight : 0;
+    const el = document.getElementById('prompt-bar');
+    const h = el ? Math.ceil(el.getBoundingClientRect().height) : 0;
+    if (h !== promptBarHeight) promptBarHeight = h;
+    barMeasured = true;
+    updateMeasurementsReady();
+  }
+
+  function measureContainer() {
+    updateContainerSize();
+    containerMeasured = true;
+    updateMeasurementsReady();
+  }
+
+  function updateMeasurementsReady() {
+    measurementsReady = containerMeasured && barMeasured;
+  }
+
+  function refitIfAllowed() {
+    if (layoutData?.nodes?.length && measurementsReady && !hasInteracted) {
+      fitToScreen(true); // includes bottom safe-zone
     }
   }
 
@@ -160,28 +182,42 @@
   // buttons
   function zoomIn()  { hasInteracted = true; const r = svgEl.getBoundingClientRect(); zoomTo(r.width/2, r.height/2, 1.1); }
   function zoomOut() { hasInteracted = true; const r = svgEl.getBoundingClientRect(); zoomTo(r.width/2, r.height/2, 1/1.1); }
-  function resetView() { hasInteracted = false; measurePromptBar(); fitToScreen(true); }
+  function resetView() { hasInteracted = false; refitIfAllowed(); }
 
   onMount(() => {
-    updateContainerSize();
+    // Initial measurements
+    measureContainer();
     measurePromptBar();
-    // initial safe-fit (do not overlap prompt bar)
-    fitToScreen(true);
 
+    // Set up ResizeObserver for prompt bar
     if (typeof window !== 'undefined') {
+      const barEl = document.getElementById('prompt-bar');
+      if (barEl) {
+        barRO = new ResizeObserver(() => {
+          measurePromptBar();
+          refitIfAllowed();
+        });
+        barRO.observe(barEl);
+      }
+
+      // Window resize handler
       window.addEventListener('resize', () => {
-        updateContainerSize();
+        measureContainer();
         measurePromptBar();
-        // if user has interacted, keep current pan/zoom; otherwise re-fit with safe-zone
-        if (!hasInteracted) fitToScreen(true);
+        refitIfAllowed();
       });
     }
   });
 
+  onDestroy(() => {
+    if (barRO) {
+      barRO.disconnect();
+    }
+  });
+
   // re-fit when layout changes and user hasn't interacted yet
-  $: if (layoutData && !hasInteracted) {
-    measurePromptBar();
-    fitToScreen(true);
+  $: if (layoutData?.nodes?.length && !hasInteracted) {
+    refitIfAllowed();
   }
 
   function rectIntersection(p: { x: number; y: number }, rect: { x: number; y: number; width: number; height: number }): { x: number; y: number } {

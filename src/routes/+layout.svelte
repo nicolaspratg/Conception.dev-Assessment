@@ -48,8 +48,9 @@
 		<!-- PromptBar positioning -->
 		<div
 			id="prompt-bar"
-			class="pointer-events-none z-50 absolute inset-x-0 bottom-6 flex justify-center">
-			<div class="pointer-events-auto w-[min(640px,92%)]">
+			class="pointer-events-none z-50 absolute inset-x-0 bottom-6 flex justify-center md:bottom-6 sm:fixed sm:left-1/2 sm:-translate-x-1/2 sm:bottom-[calc(env(safe-area-inset-bottom,0px)+14px)] sm:px-4"
+		>
+			<div class="pointer-events-auto w-[min(640px,92%)] sm:w-[min(640px,92vw)]">
 				<PromptBar />
 			</div>
 		</div>
