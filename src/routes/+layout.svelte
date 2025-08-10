@@ -2,6 +2,7 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import '../app.css';
 	import PromptBar from '$lib/PromptBar.svelte';
+	import HelpDrawer from '$lib/HelpDrawer.svelte';
 	import { themeStore } from '$lib/stores/themeStore.js';
 	import { bottomInset } from '$lib/stores/viewport';
 	import { onMount } from 'svelte';
@@ -69,4 +70,7 @@
 			<PromptBar />
 		</div>
 	</div>
+
+	<!-- Help Drawer -->
+	<HelpDrawer />
 </div>

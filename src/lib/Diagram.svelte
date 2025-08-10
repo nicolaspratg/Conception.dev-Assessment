@@ -1,6 +1,8 @@
 <script lang="ts">
   import { computeLayout } from './layout';
   import { diagramStore } from './stores/diagramStore';
+  import { helpOpen, showHints } from './stores/helpStore';
+  import { tooltip } from './actions/tooltip';
   import type { Node } from './types/diagram';
   import { onMount, onDestroy } from 'svelte';
   let Panzoom: any;
@@ -300,6 +302,13 @@
         measureContainer();
         measurePromptBar();
         refitIfAllowed();
+      });
+
+      // Keyboard shortcuts
+      window.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'h') {
+          helpOpen.update(v => !v);
+        }
       });
     }
 
@@ -645,9 +654,26 @@
   </svg>
 
   <!-- Zoom controls -->
-  <div class="absolute top-4 right-4 z-40 flex flex-col gap-2">
-    <button class="w-9 h-9 rounded bg-gray-800/70 text-white hover:bg-gray-700/70 transition-colors flex items-center justify-center" on:click={zoomIn}>＋</button>
-    <button class="w-9 h-9 rounded bg-gray-800/70 text-white hover:bg-gray-700/70 transition-colors flex items-center justify-center" on:click={zoomOut}>－</button>
-    <button class="w-9 h-9 rounded bg-gray-800/70 text-white hover:bg-gray-700/70 transition-colors flex items-center justify-center" on:click={resetView}>⟲</button>
+  <div class="fixed right-[max(12px,env(safe-area-inset-right))] top-24 z-[54] flex flex-col gap-2">
+    <button class="btn-tool" on:click={zoomIn} use:tooltip={$showHints ? { content: 'Zoom in (+)' } : undefined}>＋</button>
+    <button class="btn-tool" on:click={zoomOut} use:tooltip={$showHints ? { content: 'Zoom out (-)' } : undefined}>－</button>
+    <button class="btn-tool" on:click={resetView} use:tooltip={$showHints ? { content: 'Reset (R)' } : undefined}>⤾</button>
+    
+    <!-- Help button -->
+    <button
+      class="btn-tool"
+      on:click={() => helpOpen.update(v => !v)}
+      aria-label="Open help"
+      use:tooltip={$showHints ? { content: 'Help (H)' } : undefined}
+    >?</button>
   </div>
+
+  <style>
+    .btn-tool { 
+      @apply w-11 h-11 rounded-md bg-white/90 dark:bg-gray-800/90 border border-black/10 dark:border-white/10 shadow flex items-center justify-center text-lg text-gray-700 dark:text-gray-200; 
+    }
+    .btn-tool:focus { 
+      @apply outline-none ring-2 ring-sky-400; 
+    }
+  </style>
 </div> 
