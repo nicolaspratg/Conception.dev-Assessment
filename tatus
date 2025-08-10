@@ -1,0 +1,5 @@
+warning: LF will be replaced by CRLF in src/lib/Diagram.svelte.
+The file will have its original line endings in your working directory
+ src/lib/Diagram.svelte     | 654 [32m++++[m[31m-----------------------------------------[m
+ tests/unit/Diagram.test.ts |  13 [32m+[m[31m-[m
+ 2 files changed, 47 insertions(+), 620 deletions(-)
