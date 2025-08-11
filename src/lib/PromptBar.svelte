@@ -2,6 +2,10 @@
 	import { diagramStore } from './stores/diagramStore.js';
 	import { diagramApi } from './api/client/diagramApi.js';
 	import { createEventDispatcher, tick } from 'svelte';
+	import { promptHistory } from './stores/promptHistory.js';
+	import { promptInput } from './stores/promptInput.js';
+	import RateLimitDebug from './components/RateLimitDebug.svelte';
+	import Spinner from './components/Spinner.svelte';
 	
 	const dispatch = createEventDispatcher();
 	
@@ -9,6 +13,20 @@
 	let loading = $state(false);
 	let showToast = $state(false);
 	let textarea: HTMLTextAreaElement;
+	let debugComponent: RateLimitDebug;
+	
+	// Keep prompt in sync with the shared store
+	$effect(() => {
+		promptInput.set(prompt);
+	});
+	
+	// Listen for changes from the drawer
+	$effect(() => {
+		const drawerPrompt = $promptInput;
+		if (drawerPrompt && drawerPrompt !== prompt) {
+			prompt = drawerPrompt;
+		}
+	});
 
 	// Auto-resize textarea
 	$effect(() => {
@@ -33,12 +51,20 @@
 			console.log('Received diagram data:', diagramData);
 			diagramStore.set(diagramData);
 			
+			// Save to history after successful generation
+			promptHistory.add(text);
+			
+			// Log successful request
+			debugComponent?.logRequest(text, true);
+			
 			// Show success message
 			prompt = ''; // Clear the form
 			showToast = true;
 			setTimeout(() => (showToast = false), 3000);
 		} catch (err) {
 			console.error('Error generating diagram:', err);
+			// Log failed request
+			debugComponent?.logRequest(text, false);
 			// Don't clear the prompt on error so user can try again
 		} finally {
 			loading = false;
@@ -70,14 +96,16 @@
 		<button
 			onclick={submit}
 			class="w-14 h-14 flex items-center justify-center bg-emerald-600
-				   hover:bg-emerald-500 rounded-lg text-2xl disabled:opacity-50"
+				   hover:bg-emerald-500 rounded-lg disabled:opacity-50 transition-colors"
 			disabled={loading}
 			aria-label="Generate"
 		>
 			{#if loading}
-				⏳
+				<Spinner size={20} className="text-white" />
 			{:else}
-				🡅
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 text-white">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
+				</svg>
 			{/if}
 		</button>
 </div>
@@ -88,6 +116,14 @@
 		Diagram generated successfully!
 	</div>
 {/if}
+
+<!-- Rate Limit Debug Component -->
+<RateLimitDebug bind:this={debugComponent} />
+
+<!-- Accessibility: Live region for loading state -->
+<div class="sr-only" aria-live="polite">
+	{#if loading}Generating…{/if}
+</div>
 
 <style>
 	@keyframes fade-in {

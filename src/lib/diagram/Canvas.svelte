@@ -37,6 +37,26 @@
   // Layout computation
   $: layoutNodes = computeLayout(nodes, edges, containerWidth, containerHeight, { rankdir: currentRankdir() });
   $: layoutData = { nodes: layoutNodes, edges };
+  
+  // Auto-fit when new data arrives and we haven't interacted yet
+  $: if (layoutData?.nodes?.length && !hasInteracted && insetsReady && svgElement && !initialFitDone) {
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      if (!hasInteracted && !initialFitDone) {
+        console.log('[Canvas] Auto-fitting diagram with', layoutData.nodes.length, 'nodes');
+        fitToScreen();
+        initialFitDone = true;
+        svgReady = true;
+      }
+    });
+  }
+  
+  // Reset interaction state when new data arrives (for fresh diagrams)
+  $: if (layoutData?.nodes?.length && JSON.stringify(layoutData.nodes) !== JSON.stringify(nodes)) {
+    // New diagram data arrived, reset interaction state to allow auto-fit
+    hasInteracted = false;
+    initialFitDone = false;
+  }
 
 
 
@@ -109,8 +129,10 @@
   }
 
   function fitToScreen() {
-    if (!svgElement) return;
+    if (!svgElement || !layoutData?.nodes?.length) return;
     const rect = svgElement.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return; // Wait for valid dimensions
+    
     const t = getFitTransform(layoutData.nodes, rect.width, rect.height, insets, 24);
     panX = t.x;
     panY = t.y;
@@ -125,7 +147,7 @@
     hasInteracted = true;
     const { cx, cy } = visibleCenterLocal(svgElement, insets);
     const factor = Math.exp(-(e.deltaY) * 0.0015);
-    zoomTo(cx, cy, factor);
+    smoothZoomTo(cx, cy, factor);
   }
 
   // pan (mouse & touch)
@@ -151,7 +173,7 @@
         const rect = svgElement.getBoundingClientRect();
         const cx = (a.x + b.x)/2 - rect.left;
         const cy = (a.y + b.y)/2 - rect.top;
-        zoomTo(cx, cy, distNow / distPrev);
+        smoothZoomTo(cx, cy, distNow / distPrev);
       }
       return;
     }
@@ -173,24 +195,74 @@
     if (!svgElement) return;
     hasInteracted = true; 
     const { cx, cy } = visibleCenterLocal(svgElement, insets);
-    zoomTo(cx, cy, 1.1);
+    smoothZoomTo(cx, cy, 1.1);
   }
   
   export function zoomOut() { 
     if (!svgElement) return;
     hasInteracted = true; 
     const { cx, cy } = visibleCenterLocal(svgElement, insets);
-    zoomTo(cx, cy, 1/1.1);
+    smoothZoomTo(cx, cy, 1/1.1);
   }
   
   export function resetView() { 
-    hasInteracted = false; 
     if (!svgElement) return;
+    
     const rect = svgElement.getBoundingClientRect();
     const t = getFitTransform(layoutData.nodes, rect.width, rect.height, insets, 24);
-    panX = t.x; 
-    panY = t.y; 
-    scale = t.scale;
+    
+    // Use smooth animation to reset view
+    smoothZoomTo(0, 0, 1, t.x, t.y, t.scale);
+    
+    // Reset interaction state after animation completes
+    setTimeout(() => {
+      hasInteracted = false;
+      initialFitDone = true; // Prevent reactive auto-fit from triggering
+    }, 300); // Match animation duration
+  }
+
+  // Smooth zoom animation function
+  function smoothZoomTo(cx: number, cy: number, factor: number, targetX?: number, targetY?: number, targetScale?: number) {
+    const startPanX = panX;
+    const startPanY = panY;
+    const startScale = scale;
+    
+    let targetPanX: number, targetPanY: number, targetScaleFinal: number;
+    
+    if (targetX !== undefined && targetY !== undefined && targetScale !== undefined) {
+      // For reset view
+      targetPanX = targetX;
+      targetPanY = targetY;
+      targetScaleFinal = targetScale;
+    } else {
+      // For zoom in/out
+      const newScale = Math.max(SCALE_MIN, Math.min(SCALE_MAX, scale * factor));
+      const k = newScale / scale;
+      targetPanX = cx - k * (cx - panX);
+      targetPanY = cy - k * (cy - panY);
+      targetScaleFinal = newScale;
+    }
+    
+    const duration = 300; // 300ms animation
+    const startTime = performance.now();
+    
+    function animate(currentTime: number) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function (ease-out)
+      const easeProgress = 1 - Math.pow(1 - progress, 3);
+      
+      panX = startPanX + (targetPanX - startPanX) * easeProgress;
+      panY = startPanY + (targetPanY - startPanY) * easeProgress;
+      scale = startScale + (targetScaleFinal - startScale) * easeProgress;
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    }
+    
+    requestAnimationFrame(animate);
   }
 
 
@@ -210,14 +282,16 @@
         };
         insetsReady = true;
         
-        // Do initial fit if we have data
+        // If we already have data, trigger the reactive fit
         if (layoutData?.nodes?.length && !hasInteracted) {
-          fitToScreen();
-          initialFitDone = true;
-          requestAnimationFrame(() => {
-            svgReady = true;
-          });
+          // The reactive statement will handle the fit
+        } else {
+          // No data yet, just make SVG ready
+          svgReady = true;
         }
+      } else {
+        // Fallback: make SVG ready even if insets measurement fails
+        svgReady = true;
       }
     }, 100);
 

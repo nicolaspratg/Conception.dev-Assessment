@@ -64,15 +64,20 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
     const now = Date.now();
     const clientData = requestCounts.get(clientId);
     
+    console.log(`[Rate Limit] Client ${clientId}: ${clientData ? `${clientData.count}/${RATE_LIMIT} requests` : 'new client'}`);
+    
     if (clientData && now < clientData.resetTime) {
       if (clientData.count >= RATE_LIMIT) {
+        console.log(`[Rate Limit] Client ${clientId}: RATE LIMITED - ${clientData.count}/${RATE_LIMIT} requests`);
         return json({ 
           error: 'Rate limit exceeded. Please wait a minute before trying again.' 
         }, { status: 429 });
       }
       clientData.count++;
+      console.log(`[Rate Limit] Client ${clientId}: ${clientData.count}/${RATE_LIMIT} requests`);
     } else {
       requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+      console.log(`[Rate Limit] Client ${clientId}: 1/${RATE_LIMIT} requests (window resets at ${new Date(now + RATE_LIMIT_WINDOW).toLocaleTimeString()})`);
     }
 
     const systemPrompt = `You are a UI-schema generator that creates architecture diagrams. 
