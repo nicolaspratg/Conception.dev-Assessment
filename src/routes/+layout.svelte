@@ -6,6 +6,7 @@
 	import { themeStore } from '$lib/stores/themeStore.js';
 	import { bottomInset } from '$lib/stores/viewport';
 	import { onMount } from 'svelte';
+	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 
 	let { children } = $props();
 	
@@ -23,17 +24,6 @@
 		mql.addEventListener('change', updateMQ);
 		return () => mql.removeEventListener('change', updateMQ);
 	});
-	
-	// Reactive statement to update the dark class when theme changes
-	$effect(() => {
-		if (typeof document !== 'undefined') {
-			document.documentElement.classList.toggle("dark", $themeStore);
-		}
-	});
-	
-	function toggleDarkMode() {
-		themeStore.toggle();
-	}
 </script>
 
 <svelte:head>
@@ -46,13 +36,7 @@
 		<h1 class="text-lg font-semibold text-gray-900 dark:text-gray-200">
 			Conception.dev Mock-up Generator
 		</h1>
-		<button 
-			onclick={toggleDarkMode}
-			class="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-			aria-label="Toggle dark mode"
-		>
-			{$themeStore ? '☀️' : '🌙'}
-		</button>
+		<ThemeToggle />
 	</header>
 
 	<!-- Main Content Area -->
