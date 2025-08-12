@@ -20,14 +20,18 @@
         rx="4"
         class="dark:fill-gray-800 dark:stroke-gray-600"
       />
-      <text
-        x={node.x + (node.width || 150) / 2}
-        y={node.y + (node.height || 80) / 2}
-        text-anchor="middle"
-        dominant-baseline="middle"
-        class="text-sm font-medium fill-gray-700 dark:fill-gray-200 capitalize"
-      >
-        {node.label}
+      <!-- center coordinates -->
+      {@const cx = node.x + (node.width ?? 150) / 2}
+      {@const cy = node.y + (node.height ?? 80) / 2}
+      {@const lines = node.labelLines ?? [node.label]}
+      {@const lh = node.lineHeight ?? 20}
+      {@const startY = cy - ((lines.length - 1) * lh) / 2}
+
+      <text text-anchor="middle" dominant-baseline="alphabetic"
+        class="text-sm font-medium fill-gray-700 dark:fill-gray-200">
+        {#each lines as line, i}
+          <tspan x={cx} y={startY + i * lh}>{line}</tspan>
+        {/each}
       </text>
     {:else if node.type === 'external'}
       <!-- Circle for external APIs -->
@@ -40,14 +44,16 @@
         stroke-width="2"
         class="dark:fill-sky-800 dark:stroke-sky-400"
       />
-      <text
-        x={node.x + (node.radius || 50)}
-        y={node.y + (node.radius || 50)}
-        text-anchor="middle"
-        dominant-baseline="middle"
-        class="text-sm font-medium fill-sky-700 dark:fill-sky-200 capitalize"
-      >
-        {node.label}
+      {@const cx = node.x + (node.radius ?? 50)}
+      {@const cy = node.y + (node.radius ?? 50)}
+      {@const lines = node.labelLines ?? [node.label]}
+      {@const lh = node.lineHeight ?? 20}
+      {@const startY = cy - ((lines.length - 1) * lh) / 2}
+      <text text-anchor="middle" dominant-baseline="alphabetic"
+        class="text-sm font-medium fill-sky-700 dark:fill-sky-200">
+        {#each lines as line, i}
+          <tspan x={cx} y={startY + i * lh}>{line}</tspan>
+        {/each}
       </text>
     {:else if node.type === 'datastore'}
       <!-- Cylinder for data stores -->
@@ -81,14 +87,18 @@
         stroke-width="2"
         class="dark:fill-amber-700 dark:stroke-amber-400"
       />
-      <text
-        x={node.x + (node.width || 120) / 2}
-        y={node.y + (node.height || 80) / 2}
-        text-anchor="middle"
-        dominant-baseline="middle"
-        class="text-sm font-medium fill-amber-700 dark:fill-amber-200 capitalize"
-      >
-        {node.label}
+      <!-- center coordinates -->
+      {@const cx = node.x + (node.width ?? 120) / 2}
+      {@const cy = node.y + (node.height ?? 80) / 2}
+      {@const lines = node.labelLines ?? [node.label]}
+      {@const lh = node.lineHeight ?? 20}
+      {@const startY = cy - ((lines.length - 1) * lh) / 2}
+
+      <text text-anchor="middle" dominant-baseline="alphabetic"
+        class="text-sm font-medium fill-amber-700 dark:fill-amber-200">
+        {#each lines as line, i}
+          <tspan x={cx} y={startY + i * lh}>{line}</tspan>
+        {/each}
       </text>
     {:else if node.type === 'custom'}
       <!-- Custom shapes based on shape property -->
@@ -101,14 +111,18 @@
           stroke-width="2"
           class="dark:fill-cyan-800 dark:stroke-cyan-400"
         />
-        <text
-          x={node.x + (node.width || 100) / 2}
-          y={node.y + (node.height || 60) / 2}
-          text-anchor="middle"
-          dominant-baseline="middle"
-          class="text-sm font-medium fill-cyan-700 dark:fill-cyan-200 capitalize"
-        >
-          {node.label}
+        <!-- center coordinates -->
+        {@const cx = node.x + (node.width ?? 100) / 2}
+        {@const cy = node.y + (node.height ?? 60) / 2}
+        {@const lines = node.labelLines ?? [node.label]}
+        {@const lh = node.lineHeight ?? 20}
+        {@const startY = cy - ((lines.length - 1) * lh) / 2}
+
+        <text text-anchor="middle" dominant-baseline="alphabetic"
+          class="text-sm font-medium fill-cyan-700 dark:fill-cyan-200">
+          {#each lines as line, i}
+            <tspan x={cx} y={startY + i * lh}>{line}</tspan>
+          {/each}
         </text>
       {:else if node.shape === 'diamond'}
         <!-- Diamond for decision points, etc. -->
@@ -119,14 +133,18 @@
           stroke-width="2"
           class="dark:fill-red-800 dark:stroke-red-400"
         />
-        <text
-          x={node.x + (node.width || 100) / 2}
-          y={node.y + (node.height || 60) / 2}
-          text-anchor="middle"
-          dominant-baseline="middle"
-          class="text-sm font-medium fill-red-700 dark:fill-red-200 capitalize"
-        >
-          {node.label}
+        <!-- center coordinates -->
+        {@const cx = node.x + (node.width ?? 100) / 2}
+        {@const cy = node.y + (node.height ?? 60) / 2}
+        {@const lines = node.labelLines ?? [node.label]}
+        {@const lh = node.lineHeight ?? 20}
+        {@const startY = cy - ((lines.length - 1) * lh) / 2}
+
+        <text text-anchor="middle" dominant-baseline="alphabetic"
+          class="text-sm font-medium fill-red-700 dark:fill-red-200">
+          {#each lines as line, i}
+            <tspan x={cx} y={startY + i * lh}>{line}</tspan>
+          {/each}
         </text>
       {:else if node.shape === 'triangle'}
         <!-- Triangle for special services -->
@@ -137,14 +155,18 @@
           stroke-width="2"
           class="dark:fill-green-800 dark:stroke-green-400"
         />
-        <text
-          x={node.x + (node.width || 100) / 2}
-          y={node.y + (node.height || 60) * 0.67}
-          text-anchor="middle"
-          dominant-baseline="middle"
-          class="text-sm font-medium fill-green-700 dark:fill-green-200 capitalize"
-        >
-          {node.label}
+        <!-- center coordinates -->
+        {@const cx = node.x + (node.width ?? 100) / 2}
+        {@const cy = node.y + (node.height ?? 60) * 0.67}
+        {@const lines = node.labelLines ?? [node.label]}
+        {@const lh = node.lineHeight ?? 20}
+        {@const startY = cy - ((lines.length - 1) * lh) / 2}
+
+        <text text-anchor="middle" dominant-baseline="alphabetic"
+          class="text-sm font-medium fill-green-700 dark:fill-green-200">
+          {#each lines as line, i}
+            <tspan x={cx} y={startY + i * lh}>{line}</tspan>
+          {/each}
         </text>
       {:else}
         <!-- Default to rectangle for unknown custom shapes -->
@@ -159,14 +181,18 @@
           rx="4"
           class="dark:fill-gray-800 dark:stroke-gray-600"
         />
-        <text
-          x={node.x + (node.width || 150) / 2}
-          y={node.y + (node.height || 80) / 2}
-          text-anchor="middle"
-          dominant-baseline="middle"
-          class="text-sm font-medium fill-gray-700 dark:fill-gray-200 capitalize"
-        >
-          {node.label}
+        <!-- center coordinates -->
+        {@const cx = node.x + (node.width ?? 150) / 2}
+        {@const cy = node.y + (node.height ?? 80) / 2}
+        {@const lines = node.labelLines ?? [node.label]}
+        {@const lh = node.lineHeight ?? 20}
+        {@const startY = cy - ((lines.length - 1) * lh) / 2}
+
+        <text text-anchor="middle" dominant-baseline="alphabetic"
+          class="text-sm font-medium fill-gray-700 dark:fill-gray-200">
+          {#each lines as line, i}
+            <tspan x={cx} y={startY + i * lh}>{line}</tspan>
+          {/each}
         </text>
       {/if}
     {/if}

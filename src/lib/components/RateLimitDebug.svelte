@@ -77,7 +77,7 @@
       {#if requestLog.length === 0}
         <div class="text-xs text-gray-500 dark:text-gray-400">No requests logged yet</div>
       {:else}
-        <div class="space-y-1 max-h-32 overflow-y-auto">
+        <div class="space-y-1 max-h-32 overflow-y-auto scrollbar-thin">
           {#each requestLog as req}
             <div class="text-xs p-2 rounded {req.success ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}">
               <div class="flex items-center gap-2">

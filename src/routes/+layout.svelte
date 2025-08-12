@@ -7,8 +7,9 @@
 	import { bottomInset } from '$lib/stores/viewport';
 	import { onMount } from 'svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
-	import LeftDrawer from '$lib/components/LeftDrawer.svelte';
-	import { drawerOpen } from '$lib/stores/drawerStore.js';
+	import Drawer from '$lib/drawer/Drawer.svelte';
+	import LibraryContent from '$lib/drawer/LibraryContent.svelte';
+
 
 	let { children } = $props();
 	
@@ -36,17 +37,6 @@
 	<!-- Title Bar -->
 	<header class="h-12 bg-white dark:bg-[#343541] border-b border-gray-200 dark:border-gray-700 px-4 flex items-center justify-between z-40">
 		<div class="flex items-center gap-2">
-			<button
-				class="rounded-md p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-600"
-				aria-label="Open drawer"
-				onclick={() => drawerOpen.open()}
-				title="Open library"
-			>
-				<!-- simple bars icon -->
-				<svg viewBox="0 0 24 24" class="size-5" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"/>
-				</svg>
-			</button>
 			<h1 class="text-lg font-semibold text-gray-900 dark:text-gray-200">
 				Conception.dev Mock-up Generator
 			</h1>
@@ -75,6 +65,8 @@
 	<!-- Help Drawer -->
 	<HelpDrawer />
 	
-	<!-- Left Drawer -->
-	<LeftDrawer />
+	<!-- Library Drawer -->
+	<Drawer>
+		<LibraryContent />
+	</Drawer>
 </div>

@@ -70,18 +70,7 @@
         checkIsFixedBar();
       });
 
-      // Keyboard shortcuts
-      window.addEventListener('keydown', (e) => {
-        if (e.key.toLowerCase() === 'h') {
-          helpOpen.update(v => !v);
-        } else if (e.key === '+' || e.key === '=') {
-          canvasRef?.zoomIn();
-        } else if (e.key === '-') {
-          canvasRef?.zoomOut();
-        } else if (e.key.toLowerCase() === 'r') {
-          canvasRef?.resetView();
-        }
-      });
+
     }
   });
 
@@ -104,14 +93,11 @@
     edges={data.edges}
     {containerWidth}
     {containerHeight}
-    {promptBarHeight}
-    {isFixedBar}
   />
   
   <Toolbar 
     onZoomIn={() => canvasRef?.zoomIn()}
     onZoomOut={() => canvasRef?.zoomOut()}
     onReset={() => canvasRef?.resetView()}
-    onHelp={() => helpOpen.update(v => !v)}
   />
 </div> 

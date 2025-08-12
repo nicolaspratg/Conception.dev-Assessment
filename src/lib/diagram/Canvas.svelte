@@ -11,8 +11,6 @@
   export let edges: Edge[] = [];
   export let containerWidth = 1000;
   export let containerHeight = 600;
-  export let promptBarHeight = 0;
-  export let isFixedBar = false;
 
 
   // State
@@ -35,8 +33,8 @@
   }
 
   // Layout computation
-  $: layoutNodes = computeLayout(nodes, edges, containerWidth, containerHeight, { rankdir: currentRankdir() });
-  $: layoutData = { nodes: layoutNodes, edges };
+  $: layoutResult = computeLayout(nodes, edges, containerWidth, containerHeight, { rankdir: currentRankdir() });
+  $: layoutData = layoutResult;
   
   // Auto-fit when new data arrives and we haven't interacted yet
   $: if (layoutData?.nodes?.length && !hasInteracted && insetsReady && svgElement && !initialFitDone) {

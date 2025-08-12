@@ -1,11 +1,12 @@
 <script lang="ts">
   import { tooltip } from '../actions/tooltip';
-  import { showHints } from '../stores/helpStore';
+  import { showHints, helpOpen } from '../stores/helpStore';
 
   export let onZoomIn: () => void;
   export let onZoomOut: () => void;
   export let onReset: () => void;
-  export let onHelp: () => void;
+
+  function toggleHelp() { helpOpen.update(v => !v); }
 </script>
 
 <!-- Zoom controls -->
@@ -44,9 +45,12 @@
   <!-- Help button -->
   <button
     class="group w-11 h-11 rounded-md bg-white/90 dark:bg-gray-800/90 border border-black/10 dark:border-white/10 shadow flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-700 hover:shadow-lg dark:hover:shadow-gray-900/50 hover:scale-105 active:scale-95 transition-all duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-400"
-    on:click={onHelp}
+    on:click={toggleHelp}
+    aria-haspopup="dialog"
+    aria-expanded={$helpOpen}
+    aria-controls="help-title"
     aria-label="Open help"
-    use:tooltip={$showHints ? { content: 'Help' } : undefined}
+    use:tooltip={$showHints ? { content: 'Help', position: 'bottom' } : undefined}
   >
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 transition-transform duration-200 group-hover:scale-110">
       <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />

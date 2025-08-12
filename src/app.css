@@ -12,4 +12,92 @@ html, body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+@layer utilities {
+  /* Base thin scrollbar: Firefox */
+  .scrollbar-thin {
+    scrollbar-width: thin;            /* Firefox */
+    scrollbar-color: #9ca3af transparent;
+  }
+
+  /* Base normal scrollbar: Firefox */
+  .scrollbar {
+    scrollbar-width: auto;
+    scrollbar-color: #9ca3af transparent;
+  }
+
+  /* WebKit (Chrome/Edge/Safari) — thin variant */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.6);
+    border-radius: 9999px;
+    border: 2px solid transparent; /* creates padding effect */
+    background-clip: content-box;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(107, 114, 128, 0.8);
+  }
+
+  /* WebKit — normal variant */
+  .scrollbar::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  .scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(156, 163, 175, 0.7);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  .scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(107, 114, 128, 0.9);
+  }
+
+  /* Accent (emerald) variant for important panes */
+  .scrollbar-emerald {
+    scrollbar-width: thin;
+    scrollbar-color: #10b981 transparent;
+  }
+  .scrollbar-emerald::-webkit-scrollbar {
+    width: 10px; height: 10px;
+  }
+  .scrollbar-emerald::-webkit-scrollbar-thumb {
+    background-color: rgba(16, 185, 129, 0.7);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .scrollbar-emerald::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(5, 150, 105, 0.9);
+  }
+
+  /* Dark mode tweaks */
+  .dark .scrollbar-thin {
+    scrollbar-color: #6b7280 transparent;
+  }
+  .dark .scrollbar,
+  .dark .scrollbar-emerald {
+    scrollbar-color: #6b7280 transparent;
+  }
+  .dark .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: rgba(107, 114, 128, 0.7);
+  }
+  .dark .scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(107, 114, 128, 0.8);
+  }
+  .dark .scrollbar-emerald::-webkit-scrollbar-thumb {
+    background-color: rgba(16, 185, 129, 0.8);
+  }
+
+
 } 

@@ -90,7 +90,7 @@
 			disabled={loading}
 			class="flex-1 resize-none overflow-y-auto bg-transparent text-gray-900 dark:text-gray-200
 				   placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none min-h-[56px] max-h-[160px]
-				   disabled:opacity-50"
+				   disabled:opacity-50 scrollbar-thin"
 		></textarea>
 
 		<button
