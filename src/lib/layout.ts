@@ -1,126 +1,94 @@
-import * as dagre from 'dagre';
-import type { Node, Edge } from './types/diagram';
-import { wrapLabel } from './text/measure';
-import { uiScale } from './uiScale';
+// src/lib/layout.ts
+import dagre from 'dagre';
+import type { DiagramData } from './types/diagram';
+import { measureText, pillSize } from './diagram/measure';
 
-type Rankdir = 'TB' | 'LR';
-type LayoutOpts = { rankdir?: Rankdir; nodesep?: number; ranksep?: number; edgesep?: number };
+const NODE_HPAD = 24;
+const NODE_VPAD = 16;
+const NODE_MAX_WIDTH = 320;
+const NODE_FONT = 14;
 
-// Tunables
-const FONT = '600 14px Inter, ui-sans-serif, system-ui'; // match your text class
-const PAD_X = 24;   // horizontal padding inside node
-const PAD_Y = 16;   // vertical padding inside node
-const MIN_W = 120;
-const MAX_W = 400;  // increased to accommodate longer text
-const LINE_H = 20;  // align with text-[14px] ~ 20px line-box
+const CHIP_FONT = 12;
+const GRAPH_BASE_MARGIN = 48;
 
-function sizeForNode(n: Node): { width: number; height: number; lines: string[]; lineHeight: number } {
-  const s = uiScale();
-  
-  if (n.type === 'external') {
-    // circle: allow slight growth if label is wide
-    const radius = (n.radius ?? 50) * s;
-    const wrapped = wrapLabel(n.label, 2 * radius - PAD_X * s, FONT, LINE_H * s);
-    const needed = Math.max(wrapped.width + PAD_X * s, radius * 2);
-    const finalRadius = Math.max(radius, Math.ceil(needed / 2));
-    n.radius = finalRadius;
-    return { width: finalRadius * 2, height: finalRadius * 2, lines: wrapped.lines, lineHeight: wrapped.lineHeight };
-  }
-
-  const wrapped = wrapLabel(n.label, (MAX_W - PAD_X) * s, FONT, LINE_H * s);
-  const width = Math.max(MIN_W * s, Math.min(MAX_W * s, Math.ceil(wrapped.width + PAD_X * s)));
-  // For cylinder, add space for the ellipses top/bottom
-  if (n.type === 'datastore') {
-    const bodyH = Math.max(56 * s, wrapped.height + PAD_Y * s);
-    const ellipseH = 30 * s; // top + bottom ellipses (15 + 15)
-    const height = bodyH + ellipseH;
-    return { width, height, lines: wrapped.lines, lineHeight: wrapped.lineHeight };
-  }
-
-  const height = Math.max(56 * s, wrapped.height + PAD_Y * s);
-  return { width, height, lines: wrapped.lines, lineHeight: wrapped.lineHeight };
-}
-
-export function computeLayout(nodes: Node[], edges: Edge[], _cw: number, _ch: number, opts: LayoutOpts = {}) {
-  // Return early if we're in SSR environment
-  if (typeof window === 'undefined') {
-    // Return nodes with basic positioning for SSR
-    const outNodes = nodes.map((n, index) => {
-      const s = sizeForNode(n);
-      return {
-        ...n,
-        x: index * 200,
-        y: index * 100,
-        width: s.width,
-        height: s.height,
-        labelLines: s.lines,
-        lineHeight: s.lineHeight
-      };
-    });
-    
-    const outEdges = edges.map((e) => ({
-      ...e,
-      points: [],
-      labelX: 0,
-      labelY: 0
-    }));
-    
-    return { nodes: outNodes, edges: outEdges };
-  }
-
+export function computeLayout(data: DiagramData) {
   const g = new dagre.graphlib.Graph({ multigraph: true, compound: false });
-  g.setGraph({
-    rankdir: opts.rankdir ?? 'TB',
-    nodesep: opts.nodesep ?? 80, // spacing between nodes
-    edgesep: opts.edgesep ?? 40, // spacing between edges
-    ranksep: opts.ranksep ?? 100, // spacing between ranks
-    marginx: 40, // margins
-    marginy: 40, // margins
-    // important to leave label space:
-    acyclicer: 'greedy'
-  });
   g.setDefaultEdgeLabel(() => ({}));
 
-  // add nodes (ensure width/height set)
-  for (const n of nodes) {
-    const s = sizeForNode(n);
-    n.width = s.width;
-    n.height = s.height;
-    n.labelLines = s.lines;
-    n.lineHeight = s.lineHeight;
-    g.setNode(n.id, { width: n.width!, height: n.height! });
+  // Measure nodes
+  const nodesMeasured = data.nodes.map((n) => {
+    const { width, height } = measureText(n.label ?? '', NODE_FONT, NODE_MAX_WIDTH);
+    const w = Math.max(80, Math.min(NODE_MAX_WIDTH, width + NODE_HPAD * 2));
+    const h = Math.max(40, height + NODE_VPAD * 2);
+    return { ...n, _w: w, _h: h };
+  });
+
+  // Measure edge chips
+  const edgesMeasured = data.edges.map((e) => {
+    const chip = pillSize(e.label ?? '', CHIP_FONT);
+    return { ...e, _chipW: chip.width, _chipH: chip.height };
+  });
+
+  // Adaptive spacing & margins
+  const maxNodeW = Math.max(80, ...nodesMeasured.map((n: any) => n._w));
+  const maxChipW = Math.max(64, ...edgesMeasured.map((e: any) => e._chipW));
+
+  const nodesep = Math.round(Math.max(80, maxNodeW * 0.25));
+  const ranksep = Math.round(Math.max(100, maxNodeW * 0.35));
+  const edgesep = 20;
+
+  const marginx = GRAPH_BASE_MARGIN + Math.round(maxChipW * 0.5);
+  const marginy = GRAPH_BASE_MARGIN + 24;
+
+  g.setGraph({
+    rankdir: 'LR',
+    nodesep,
+    ranksep,
+    edgesep,
+    marginx,
+    marginy,
+    acyclicer: 'greedy',
+    ranker: 'tight-tree'
+  });
+
+  // Nodes
+  for (const n of nodesMeasured) {
+    g.setNode(n.id, {
+      width: (n as any)._w,
+      height: (n as any)._h,
+      label: n.label
+    });
   }
 
-  // add edges — use a unique name to distinguish parallels
-  for (const e of edges) {
-    const name = e.id ?? `edge_${e.source}_${e.target}_${e.label?.replace(/\s+/g, '_')}`;
-    g.setEdge(e.source, e.target, { label: e.label ?? '', labelpos: 'c' }, name);
+  // Edges (minlen helps keep chips off nodes)
+  for (const e of edgesMeasured) {
+    const minlen = Math.max(1, Math.ceil(((e as any)._chipW ?? 60) / 60));
+    g.setEdge(e.source, e.target, {
+      label: e.label,
+      labelpos: 'c',
+      labeloffset: 14,
+      minlen
+    }, e.id);
   }
 
   dagre.layout(g);
 
-  // build result arrays
-  const outNodes = nodes.map(n => {
-    const d = g.node(n.id);
-    return { 
-      ...n, 
-      x: d.x - d.width / 2, 
-      y: d.y - d.height / 2, 
-      width: d.width, 
-      height: d.height 
-    };
-  });
-
-  const outEdges = edges.map((e) => {
-    const name = e.id ?? `edge_${e.source}_${e.target}_${e.label?.replace(/\s+/g, '_')}`;
-    const de = g.edge(e.source, e.target, name);
+  // Back-fill positions
+  const nodes = nodesMeasured.map((n) => {
+    const pos = g.node(n.id);
     return {
-      ...e,
-      points: de.points as Array<{ x: number; y: number }>, // routed polyline
-      labelX: de.x,  // dagre-computed label center
-      labelY: de.y
+      ...n,
+      x: pos.x,
+      y: pos.y,
+      width: (n as any)._w,
+      height: (n as any)._h
     };
   });
 
-  return { nodes: outNodes, edges: outEdges };
+  const edges = edgesMeasured.map((e) => {
+    const edge = g.edge({ v: e.source, w: e.target, name: e.id });
+    return { ...e, points: edge?.points ?? [] };
+  });
+
+  return { nodes, edges, meta: { nodesep, ranksep, marginx, marginy } };
 }

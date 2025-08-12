@@ -93,10 +93,10 @@
         {@const targetWidth = targetNode.width ?? 150}
         {@const targetHeight = targetNode.height ?? 80}
         <line 
-          x1={sourceNode.x + sourceWidth/2} 
-          y1={sourceNode.y + sourceHeight/2}
-          x2={targetNode.x + targetWidth/2} 
-          y2={targetNode.y + targetHeight/2}
+          x1={sourceNode.x} 
+          y1={sourceNode.y}
+          x2={targetNode.x} 
+          y2={targetNode.y}
           stroke-width="2" 
           marker-end={edge.directed ?? DEFAULT_DIRECTED ? 'url(#arrow)' : undefined}
           class="stroke-gray-400 dark:stroke-gray-600"
@@ -111,12 +111,13 @@
   {#each edges as edge}
     {#if edge.label && edge.labelX !== undefined && edge.labelY !== undefined}
       {@const lines = splitTextIntoLines(edge.label)}
-      {@const { width: labelWidth, height: labelHeight } = getTextDimensions(lines)}
+      {@const chipW = (edge as any)._chipW ?? getTextDimensions(lines).width}
+      {@const chipH = (edge as any)._chipH ?? getTextDimensions(lines).height}
       <rect 
-        x={edge.labelX - labelWidth/2 - 2} 
-        y={edge.labelY - labelHeight/2 - 2} 
-        width={labelWidth + 4} 
-        height={labelHeight + 4}
+        x={edge.labelX - chipW/2} 
+        y={edge.labelY - chipH/2} 
+        width={chipW} 
+        height={chipH}
         rx="3" 
         fill="rgba(255, 255, 255, 0.95)"
         stroke="rgba(0, 0, 0, 0.1)"
@@ -139,19 +140,16 @@
       {@const sourceNode = nodes.find(n => n.id === edge.source)}
       {@const targetNode = nodes.find(n => n.id === edge.target)}
       {#if sourceNode && targetNode}
-        {@const sourceWidth = sourceNode.width ?? 150}
-        {@const sourceHeight = sourceNode.height ?? 80}
-        {@const targetWidth = targetNode.width ?? 150}
-        {@const targetHeight = targetNode.height ?? 80}
-        {@const midX = (sourceNode.x + sourceWidth/2 + targetNode.x + targetWidth/2) / 2}
-        {@const midY = (sourceNode.y + sourceHeight/2 + targetNode.y + targetHeight/2) / 2}
+        {@const midX = (sourceNode.x + targetNode.x) / 2}
+        {@const midY = (sourceNode.y + targetNode.y) / 2}
         {@const lines = splitTextIntoLines(edge.label)}
-        {@const { width: labelWidth, height: labelHeight } = getTextDimensions(lines)}
+        {@const chipW = (edge as any)._chipW ?? getTextDimensions(lines).width}
+        {@const chipH = (edge as any)._chipH ?? getTextDimensions(lines).height}
         <rect 
-          x={midX - labelWidth/2 - 2} 
-          y={midY - labelHeight/2 - 2} 
-          width={labelWidth + 4} 
-          height={labelHeight + 4}
+          x={midX - chipW/2} 
+          y={midY - chipH/2} 
+          width={chipW} 
+          height={chipH}
           rx="3" 
           fill="rgba(255, 255, 255, 0.95)"
           stroke="rgba(0, 0, 0, 0.1)"

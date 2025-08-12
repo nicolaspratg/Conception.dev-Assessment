@@ -14,8 +14,8 @@
     {#if node.type === 'component'}
       <!-- Rectangle for components -->
       <rect
-        x={node.x}
-        y={node.y}
+        x={node.x - (node.width || 150) / 2}
+        y={node.y - (node.height || 80) / 2}
         width={node.width || 150}
         height={node.height || 80}
         fill="rgb(243 244 246)"
@@ -25,8 +25,8 @@
         class="dark:fill-gray-800 dark:stroke-gray-600"
       />
       <!-- center coordinates -->
-      {@const cx = node.x + (node.width ?? 150) / 2}
-      {@const cy = node.y + (node.height ?? 80) / 2}
+      {@const cx = node.x}
+      {@const cy = node.y}
       {@const lines = node.labelLines ?? [node.label]}
       {@const lh = node.lineHeight ?? 20}
       {@const startY = cy - ((lines.length - 1) * lh) / 2}
@@ -40,16 +40,16 @@
     {:else if node.type === 'external'}
       <!-- Circle for external APIs -->
       <circle
-        cx={node.x + (node.radius || 50)}
-        cy={node.y + (node.radius || 50)}
+        cx={node.x}
+        cy={node.y}
         r={node.radius || 50}
         fill="rgb(224 242 254)"
         stroke="rgb(14 165 233)"
         stroke-width="2"
         class="dark:fill-sky-800 dark:stroke-sky-400"
       />
-      {@const cx = node.x + (node.radius ?? 50)}
-      {@const cy = node.y + (node.radius ?? 50)}
+      {@const cx = node.x}
+      {@const cy = node.y}
       {@const lines = node.labelLines ?? [node.label]}
       {@const lh = node.lineHeight ?? 20}
       {@const startY = cy - ((lines.length - 1) * lh) / 2}
@@ -62,8 +62,8 @@
     {:else if node.type === 'datastore'}
       <!-- Cylinder for data stores -->
       <ellipse
-        cx={node.x + (node.width || 120) / 2}
-        cy={node.y}
+        cx={node.x}
+        cy={node.y - (node.height || 80) / 2}
         rx={(node.width || 120) / 2}
         ry="15"
         fill="rgb(254 243 199)"
@@ -72,8 +72,8 @@
         class="dark:fill-amber-700 dark:stroke-amber-400"
       />
       <rect
-        x={node.x}
-        y={node.y}
+        x={node.x - (node.width || 120) / 2}
+        y={node.y - (node.height || 80) / 2}
         width={node.width || 120}
         height={node.height || 80}
         fill="rgb(254 243 199)"
@@ -82,8 +82,8 @@
         class="dark:fill-amber-700 dark:stroke-amber-400"
       />
       <ellipse
-        cx={node.x + (node.width || 120) / 2}
-        cy={node.y + (node.height || 80)}
+        cx={node.x}
+        cy={node.y + (node.height || 80) / 2}
         rx={(node.width || 120) / 2}
         ry="15"
         fill="rgb(254 243 199)"
@@ -92,8 +92,8 @@
         class="dark:fill-amber-700 dark:stroke-amber-400"
       />
       <!-- center coordinates -->
-      {@const cx = node.x + (node.width ?? 120) / 2}
-      {@const cy = node.y + (node.height ?? 80) / 2}
+      {@const cx = node.x}
+      {@const cy = node.y}
       {@const lines = node.labelLines ?? [node.label]}
       {@const lh = node.lineHeight ?? 20}
       {@const startY = cy - ((lines.length - 1) * lh) / 2}

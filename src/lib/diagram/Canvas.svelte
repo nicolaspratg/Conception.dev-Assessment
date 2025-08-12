@@ -33,7 +33,7 @@
   }
 
   // Layout computation
-  $: layoutResult = computeLayout(nodes, edges, containerWidth, containerHeight, { rankdir: currentRankdir() });
+  $: layoutResult = computeLayout({ nodes, edges });
   $: layoutData = layoutResult;
   
   // Auto-fit when new data arrives and we haven't interacted yet
@@ -131,7 +131,7 @@
     const rect = svgElement.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return; // Wait for valid dimensions
     
-    const t = getFitTransform(layoutData.nodes, rect.width, rect.height, insets, 24);
+    const t = getFitTransform(layoutData.nodes, layoutData.edges, rect.width, rect.height, insets, 24);
     panX = t.x;
     panY = t.y;
     scale = t.scale;
@@ -207,7 +207,7 @@
     if (!svgElement) return;
     
     const rect = svgElement.getBoundingClientRect();
-    const t = getFitTransform(layoutData.nodes, rect.width, rect.height, insets, 24);
+    const t = getFitTransform(layoutData.nodes, layoutData.edges, rect.width, rect.height, insets, 24);
     
     // Use smooth animation to reset view
     smoothZoomTo(0, 0, 1, t.x, t.y, t.scale);

@@ -9,6 +9,6 @@ export { default as Toolbar } from './Toolbar.svelte';
 export * from './fit';
 export * from './transforms';
 export * from './panzoomAdapter';
-export * from './layout';
+export * from '../layout';
 export * from './constants';
 export * from './intersections';

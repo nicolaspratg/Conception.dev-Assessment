@@ -7,7 +7,7 @@ describe('dagre layout', () => {
   it('produces non-overlapping node boxes', () => {
     const nodes = [N('A'), N('B'), { ...N('DB','datastore') }];
     const edges = [{source:'A',target:'B',label:''}, {source:'B',target:'DB',label:''}];
-    const out = computeLayout(nodes as any, edges as any, 800, 600);
+    const out = computeLayout({ nodes: nodes as any, edges: edges as any });
     const boxes = out.nodes.map(n => ({ x:n.x, y:n.y, w:n.width, h:n.height }));
     const overlap = (a: {x: number, y: number, w: number, h: number}, b: {x: number, y: number, w: number, h: number}) => !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
     for (let i=0;i<boxes.length;i++) for (let j=i+1;j<boxes.length;j++)
@@ -28,7 +28,7 @@ describe('dagre layout', () => {
       {source:'4',target:'3',label:'query'},
       {source:'5',target:'1',label:'route'}
     ];
-    const out = computeLayout(nodes as any, edges as any, 1000, 800);
+    const out = computeLayout({ nodes: nodes as any, edges: edges as any });
     const boxes = out.nodes.map(n => ({ x:n.x, y:n.y, w:n.width, h:n.height }));
     const overlap = (a: {x: number, y: number, w: number, h: number}, b: {x: number, y: number, w: number, h: number}) => !(a.x+a.w<=b.x || b.x+b.w<=a.x || a.y+a.h<=b.y || b.y+b.h<=a.y);
     
@@ -49,7 +49,7 @@ describe('dagre layout', () => {
   it('supports LR rankdir with distinct x positions for chain A→B→C', () => {
     const nodes = [N('A'), N('B'), N('C')];
     const edges = [{source:'A',target:'B',label:''}, {source:'B',target:'C',label:''}];
-    const result = computeLayout(nodes as any, edges as any, 800, 600, { rankdir: 'LR' });
+    const result = computeLayout({ nodes: nodes as any, edges: edges as any });
     
     expect(result.nodes.length).toBe(3);
     const xPositions = result.nodes.map(n => n.x).sort((a, b) => a - b);

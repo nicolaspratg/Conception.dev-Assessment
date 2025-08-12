@@ -1,4 +1,5 @@
 import type { Node } from '../types/diagram';
+import { getNodeBounds } from './fit';
 
 export function getNodeById(nodes: Node[], id: string): Node | undefined {
   return nodes.find(node => node.id === id);
@@ -29,7 +30,12 @@ export function getIntersection(source: Node, target: Node): { x1: number; y1: n
     y1 = intersection.y;
   } else {
     const sourceBounds = getNodeBounds(source);
-    const intersection = rectIntersection(targetCenter, sourceBounds);
+    const intersection = rectIntersection(targetCenter, { 
+      x: sourceBounds.x, 
+      y: sourceBounds.y, 
+      width: sourceBounds.w, 
+      height: sourceBounds.h 
+    });
     x1 = intersection.x;
     y1 = intersection.y;
   }
@@ -40,7 +46,12 @@ export function getIntersection(source: Node, target: Node): { x1: number; y1: n
     y2 = intersection.y;
   } else {
     const targetBounds = getNodeBounds(target);
-    const intersection = rectIntersection(sourceCenter, targetBounds);
+    const intersection = rectIntersection(sourceCenter, { 
+      x: targetBounds.x, 
+      y: targetBounds.y, 
+      width: targetBounds.w, 
+      height: targetBounds.h 
+    });
     x2 = intersection.x;
     y2 = intersection.y;
   }
@@ -78,10 +89,4 @@ export function circleIntersection(p: { x: number; y: number }, c: { x: number; 
   };
 }
 
-export function getNodeBounds(n: Node) {
-  if (n.type === 'external' && n.radius) {
-    const d = (n.radius ?? 50) * 2;
-    return { x: n.x, y: n.y, width: d, height: d };
-  }
-  return { x: n.x, y: n.y, width: n.width ?? 150, height: n.height ?? 80 };
-}
+

@@ -1,4 +1,4 @@
-import type { Node } from '../types/diagram';
+import type { Node, Edge } from '../types/diagram';
 
 export type Insets = { top: number; right: number; bottom: number; left: number };
 
@@ -15,17 +15,34 @@ export function getNodeBounds(n: Node) {
   return { x: n.x, y: n.y, w, h };
 }
 
-export function contentBounds(nodes: Node[]) {
+export function contentBounds(nodes: Node[], edges: Edge[]) {
   if (!nodes?.length) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
   for (const n of nodes) {
-    const b = getNodeBounds(n);
-    minX = Math.min(minX, b.x);
-    minY = Math.min(minY, b.y);
-    maxX = Math.max(maxX, b.x + b.w);
-    maxY = Math.max(maxY, b.y + b.h);
+    const w = (n as any).width ?? 80;
+    const h = (n as any).height ?? 40;
+    const left = n.x - w / 2;
+    const right = n.x + w / 2;
+    const top = n.y - h / 2;
+    const bottom = n.y + h / 2;
+    if (left < minX) minX = left;
+    if (right > maxX) maxX = right;
+    if (top < minY) minY = top;
+    if (bottom > maxY) maxY = bottom;
   }
-  return { minX, minY, maxX, maxY };
+
+  const maxChipW = Math.max(0, ...edges.map((e: any) => e._chipW ?? 0));
+  const maxChipH = Math.max(0, ...edges.map((e: any) => e._chipH ?? 0));
+  const extra = Math.max(24, Math.ceil(Math.max(maxChipW, maxChipH) * 0.6));
+
+  return {
+    minX: minX - extra,
+    minY: minY - extra,
+    maxX: maxX + extra,
+    maxY: maxY + extra
+  };
 }
 
 /**
@@ -34,6 +51,7 @@ export function contentBounds(nodes: Node[]) {
  */
 export function getFitTransform(
   nodes: Node[],
+  edges: Edge[],
   containerW: number,
   containerH: number,
   insets: Insets,
@@ -41,7 +59,7 @@ export function getFitTransform(
   minScale = 0.05,
   maxScale = 1
 ) {
-  const { minX, minY, maxX, maxY } = contentBounds(nodes);
+  const { minX, minY, maxX, maxY } = contentBounds(nodes, edges);
   const contentW = Math.max(1, maxX - minX);
   const contentH = Math.max(1, maxY - minY);
 

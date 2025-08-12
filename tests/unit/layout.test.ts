@@ -15,7 +15,7 @@ describe('computeLayout', () => {
       { id: 'e2', source: '2', target: '3', label: 'Connection 2' }
     ];
     
-    const result = computeLayout(nodes, edges, 800, 600);
+    const result = computeLayout({ nodes, edges });
     
     expect(result.nodes).toHaveLength(3);
     
@@ -37,7 +37,7 @@ describe('computeLayout', () => {
       { id: 'e2', source: '2', target: '3', label: 'Query' }
     ];
     
-    const result = computeLayout(nodes, edges, 800, 600);
+    const result = computeLayout({ nodes, edges });
     
     expect(result.nodes[0].width).toBe(150); // component
     expect(result.nodes[0].height).toBe(80);
@@ -57,7 +57,7 @@ describe('computeLayout', () => {
       { id: 'e1', source: '1', target: '2', label: 'Connection' }
     ];
     
-    const result = computeLayout(nodes, edges, 800, 600);
+    const result = computeLayout({ nodes, edges });
     
     // Verify nodes have proper positioning and dimensions
     expect(result.nodes).toHaveLength(2);
