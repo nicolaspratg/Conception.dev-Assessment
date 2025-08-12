@@ -42,7 +42,7 @@
     class="fixed inset-0 z-[69] bg-black/40 transition-opacity"
     aria-label="Close drawer"
     on:click={close}
-  />
+  ></button>
 {/if}
 
 <!-- Wrapper: moves panel & tab together -->
