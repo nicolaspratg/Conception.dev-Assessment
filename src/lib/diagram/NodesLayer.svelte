@@ -1,7 +1,11 @@
 <script lang="ts">
   import type { Node } from '../types/diagram';
+  import { uiScale } from '../uiScale';
 
   export let nodes: Node[] = [];
+  
+  // Get the current UI scale factor
+  const s = uiScale();
 </script>
 
 <!-- NODES -->

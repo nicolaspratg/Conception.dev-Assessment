@@ -1,11 +1,15 @@
 <script lang="ts">
   import type { Node, Edge } from '../types/diagram';
+  import { uiScale } from '../uiScale';
 
   export let edges: Edge[] = [];
   export let nodes: Node[] = [];
 
   // Global flag for arrowheads (optional)
   const DEFAULT_DIRECTED = true; // flip to false if you prefer plain lines by default
+  
+  // Get the current UI scale factor
+  const s = uiScale();
 
   // Function to split text into lines for better readability
   function splitTextIntoLines(text: string, maxWordsPerLine: number = 2): string[] {
@@ -23,15 +27,17 @@
 
   // Function to calculate text dimensions for multi-line text
   function getTextDimensions(lines: string[], fontSize: number = 11): { width: number; height: number } {
-    if (lines.length === 0) return { width: 40, height: 20 };
+    if (lines.length === 0) return { width: 40 * s, height: 20 * s };
     
     const lineHeight = fontSize * 1.2; // 1.2 line height
-    const height = lines.length * lineHeight;
+    const height = lines.length * lineHeight * s;
     
     // Estimate width based on longest line (rough approximation)
     const longestLine = lines.reduce((longest, current) => 
       current.length > longest.length ? current : longest, '');
-    const width = Math.max(longestLine.length * 7, 40); // 7px per character estimate
+    const BASE_CHAR_PX = 7;       // original assumption
+    const MIN_PILL_PX = 40;
+    const width = Math.max(longestLine.length * BASE_CHAR_PX * s, MIN_PILL_PX * s);
     
     return { width, height };
   }
@@ -117,17 +123,17 @@
         stroke-width="1"
         class="dark:fill-gray-800/95 dark:stroke-gray-600/30"
       />
-      <text 
-        x={edge.labelX} 
-        y={edge.labelY - (lines.length - 1) * 6.6}
-        text-anchor="middle" 
-        dominant-baseline="central"
-        class="text-[11px] font-semibold fill-gray-700 dark:fill-gray-200 capitalize"
-      >
-        {#each lines as line, i}
-          <tspan x={edge.labelX} dy={i === 0 ? 0 : 13.2}>{line}</tspan>
-        {/each}
-      </text>
+              <text 
+          x={edge.labelX} 
+          y={edge.labelY - (lines.length - 1) * 6.6 * s}
+          text-anchor="middle" 
+          dominant-baseline="central"
+          class="text-[11px] font-semibold fill-gray-700 dark:fill-gray-200 capitalize"
+        >
+          {#each lines as line, i}
+            <tspan x={edge.labelX} dy={i === 0 ? 0 : 13.2 * s}>{line}</tspan>
+          {/each}
+        </text>
     {:else if edge.label}
       <!-- Fallback: center label if no dagre coordinates -->
       {@const sourceNode = nodes.find(n => n.id === edge.source)}
@@ -154,13 +160,13 @@
         />
         <text 
           x={midX} 
-          y={midY - (lines.length - 1) * 6.6}
+          y={midY - (lines.length - 1) * 6.6 * s}
           text-anchor="middle" 
           dominant-baseline="central"
           class="text-[11px] font-semibold fill-gray-700 dark:fill-gray-200 capitalize"
         >
           {#each lines as line, i}
-            <tspan x={midX} dy={i === 0 ? 0 : 13.2}>{line}</tspan>
+            <tspan x={midX} dy={i === 0 ? 0 : 13.2 * s}>{line}</tspan>
           {/each}
         </text>
       {/if}

@@ -18,48 +18,65 @@
   }
 </script>
 
-<!-- Past Prompts -->
-<section class="mb-6">
-  <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Past prompts</h3>
-  {#if $promptHistory.length === 0}
-    <p class="text-sm text-gray-500 dark:text-gray-400">No prompts yet.</p>
-  {:else}
-    <ul class="space-y-2">
-      {#each $promptHistory.slice(0,12) as item}
-        <li class="group rounded-md border border-transparent hover:border-black/10 dark:hover:border-white/10 p-2">
-          <div class="flex gap-2">
-            <button
-              class="flex-1 text-left text-sm text-gray-800 dark:text-gray-200 line-clamp-2"
-              onclick={() => usePrompt(item.text)}
-              title="Use this prompt"
-            >{item.text}</button>
-            <button
-              class="shrink-0 px-2 text-xs text-gray-500 hover:text-rose-600"
-              onclick={() => promptHistory.remove(item.id)}
-              aria-label="Remove"
-            >Remove</button>
-          </div>
-          <div class="mt-1 text-[11px] text-gray-400">{new Date(item.ts).toLocaleString()}</div>
-        </li>
-      {/each}
-    </ul>
-  {/if}
-  <div class="mt-2 flex gap-2">
-    <button class="rounded-md px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200" onclick={() => promptHistory.clear()}>Clear all</button>
-  </div>
-</section>
-
-<!-- Example Prompts -->
-<section>
-  <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-3">Example prompts</h3>
-  <div class="space-y-2">
-    {#each examplePrompts as ex}
+<div class="flex min-h-0 flex-col gap-6 h-full">
+  <!-- PAST PROMPTS (this section scrolls) -->
+  <section class="min-h-0 flex-1 flex flex-col">
+    <div class="flex items-center justify-between mb-2 shrink-0">
+      <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        Past prompts
+      </h3>
       <button 
-        class="w-full text-left p-2 rounded border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-        onclick={() => usePrompt(ex)}
+        class="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-white/10 dark:text-gray-200 dark:hover:bg-white/15"
+        onclick={() => promptHistory.clear()}
       >
-        {ex}
+        Clear all
       </button>
-    {/each}
-  </div>
-</section>
+    </div>
+
+    <!-- The ONLY scroll container -->
+    <div class="scroll-sleek min-h-0 flex-1 overflow-y-auto pr-1 pb-4">
+      {#if $promptHistory.length === 0}
+        <p class="text-sm text-gray-500 dark:text-gray-400">No prompts yet.</p>
+      {:else}
+        <ul class="space-y-3">
+          {#each $promptHistory.slice(0,12) as item}
+            <li class="relative">
+              <button 
+                class="w-full rounded-lg border border-gray-200/70 bg-white px-3 py-2 text-left text-sm text-gray-900 shadow-sm hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-white/5 pr-10"
+                onclick={() => usePrompt(item.text)}
+              >
+                {item.text}
+              </button>
+              <button 
+                class="absolute right-2 top-1/2 -translate-y-1/2 text-rose-600 hover:text-rose-500" 
+                onclick={() => promptHistory.remove(item.id)}
+                aria-label="Remove prompt"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+              </button>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </div>
+  </section>
+
+  <!-- EXAMPLE PROMPTS (non-scrolling) -->
+  <section class="shrink-0">
+    <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      Example prompts
+    </h3>
+    <div class="space-y-3">
+      {#each examplePrompts as ex}
+        <button 
+          class="w-full rounded-lg border border-gray-200/70 bg-white px-3 py-2 text-left text-sm text-gray-900 shadow-sm hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-white/5"
+          onclick={() => usePrompt(ex)}
+        >
+          {ex}
+        </button>
+      {/each}
+    </div>
+  </section>
+</div>

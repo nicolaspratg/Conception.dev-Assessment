@@ -2,9 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html { font-size: 100%; }          /* 16px on mobile */
+  @media (min-width: 1024px) {
+    html { font-size: 125%; }        /* 20px on lg+ */
+  }
+}
+
 html, body { 
   height: 100%;
   overflow: hidden;
+}
+
+/* Hide scrollbars on main containers */
+#diagram-root {
+  overflow: hidden;
+}
+
+/* Hide scrollbars on the main app container */
+.h-screen {
+  overflow: hidden;
+}
+
+/* Hide scrollbars globally for the app */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
+}
+
+/* Sleek scrollbar for specific elements */
+.scroll-sleek {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(107,114,128,.5) transparent;
+}
+.scroll-sleek::-webkit-scrollbar { 
+  width: 8px; 
+  display: block;
+}
+.scroll-sleek::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+.scroll-sleek::-webkit-scrollbar-thumb {
+  background-color: rgba(107,114,128,.5);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.dark .scroll-sleek {
+  scrollbar-color: rgba(156,163,175,.4) transparent;
+}
+.dark .scroll-sleek::-webkit-scrollbar-thumb {
+  background-color: rgba(156,163,175,.4);
 }
 
 /* Ensure proper height calculations */
