@@ -47,7 +47,7 @@
 
 <!-- Wrapper: moves panel & tab together -->
 <div
-  class="fixed left-0 top-12 h-[calc(100%-3rem)] z-[70] will-change-transform"
+  class="fixed left-0 top-14 h-[calc(100%-3.5rem)] z-[70] will-change-transform"
   style="transform: translate3d({tx}px,0,0); transition: transform 220ms cubic-bezier(0.22,1,0.36,1);"
 >
   <!-- Panel -->
@@ -56,7 +56,7 @@
     class="relative h-[100dvh] max-w-md w-full bg-white dark:bg-gray-900 shadow-xl grid grid-rows-[auto_1fr_auto] overflow-hidden ring-1 ring-black/5 dark:ring-white/10"
   >
     <!-- Header (sticky look) -->
-    <div class="sticky top-0 z-10 border-b border-gray-200/70 bg-white/90 px-5 py-4 backdrop-blur dark:border-white/10 dark:bg-gray-900/90">
+    <div class="sticky top-0 z-10 border-b border-gray-200/70 bg-white/90 px-4 sm:px-6 lg:px-8 py-4 backdrop-blur dark:border-white/10 dark:bg-gray-900/90">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Library</h2>
         <button
@@ -71,12 +71,12 @@
     </div>
 
     <!-- Row 2: content area with isolated scroll only for Past prompts -->
-    <div class="min-h-0 overflow-hidden px-5 pt-4 pb-3">
+    <div class="min-h-0 overflow-hidden px-4 sm:px-6 lg:px-8 pt-4 pb-3">
       <slot />
     </div>
 
     <!-- Footer -->
-    <div class="sticky bottom-0 z-10 border-t border-gray-200/70 bg-white/90 px-5 py-3 backdrop-blur dark:border-white/10 dark:bg-gray-900/90">
+    <div class="sticky bottom-0 z-10 border-t border-gray-200/70 bg-white/90 px-4 sm:px-6 lg:px-8 py-3 backdrop-blur dark:border-white/10 dark:bg-gray-900/90">
       <button
         type="button"
         class="w-full rounded-md bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
