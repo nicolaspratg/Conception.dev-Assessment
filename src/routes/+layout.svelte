@@ -9,6 +9,8 @@
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import Drawer from '$lib/drawer/Drawer.svelte';
 	import LibraryContent from '$lib/drawer/LibraryContent.svelte';
+	import ModeChangeToast from '$lib/ui/ModeChangeToast.svelte';
+	import { genToast } from '$lib/stores/modeStore.js';
 
 
 	let { children } = $props();
@@ -27,6 +29,22 @@
 		mql.addEventListener('change', updateMQ);
 		return () => mql.removeEventListener('change', updateMQ);
 	});
+
+	// Mode change toast state
+	let open = $state(false);
+	let mode = $state<'legacy' | 'smart'>('legacy');
+
+	$effect(() => {
+		const toastState = $genToast;
+		console.log('Toast state changed:', toastState);
+		open = toastState.open; 
+		mode = toastState.mode;
+	});
+
+	function closeToast() {
+		console.log('Closing toast');
+		genToast.set({ open: false, mode });
+	}
 </script>
 
 <svelte:head>
@@ -88,4 +106,7 @@
 	>
 		© 2025 Nicolás de Prat Gay
 	</div>
+
+	<!-- Mode-change toast lives once at app root -->
+	<ModeChangeToast {mode} {open} onClose={closeToast} />
 </div>

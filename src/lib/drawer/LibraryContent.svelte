@@ -16,6 +16,13 @@
     promptInput.set(text);
     drawerOpen.set(false);
   }
+
+  function truncateText(text: string, maxLength: number = 80): string {
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return text.substring(0, maxLength) + '...';
+  }
 </script>
 
 <div class="flex min-h-0 flex-col gap-6 h-full">
@@ -44,8 +51,9 @@
               <button 
                 class="w-full rounded-lg border border-gray-200/70 bg-white px-3 py-2 text-left text-sm text-gray-900 shadow-sm hover:bg-gray-50 dark:border-white/10 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-white/5 pr-10"
                 onclick={() => usePrompt(item.text)}
+                title={item.text}
               >
-                {item.text}
+                {truncateText(item.text)}
               </button>
               <button 
                 class="absolute right-2 top-1/2 -translate-y-1/2 text-rose-600 hover:text-rose-500" 

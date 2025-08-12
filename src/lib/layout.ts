@@ -71,11 +71,11 @@ export function computeLayout(nodes: Node[], edges: Edge[], _cw: number, _ch: nu
   const g = new dagre.graphlib.Graph({ multigraph: true, compound: false });
   g.setGraph({
     rankdir: opts.rankdir ?? 'TB',
-    nodesep: opts.nodesep ?? 120, // Increased spacing between nodes
-    edgesep: opts.edgesep ?? 80, // Increased spacing between edges
-    ranksep: opts.ranksep ?? 200, // Increased spacing between ranks
-    marginx: 60, // Increased margins
-    marginy: 60, // Increased margins
+    nodesep: opts.nodesep ?? 80, // spacing between nodes
+    edgesep: opts.edgesep ?? 40, // spacing between edges
+    ranksep: opts.ranksep ?? 100, // spacing between ranks
+    marginx: 40, // margins
+    marginy: 40, // margins
     // important to leave label space:
     acyclicer: 'greedy'
   });

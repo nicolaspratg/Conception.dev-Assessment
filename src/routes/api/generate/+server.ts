@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { z } from 'zod';
 import { env } from '$env/dynamic/private';
 import exampleDiagramData from '$lib/diagram/example-diagram.json' with { type: "json" };
+import { extractSpec, plan, planAllLevels } from '$lib/intel';
 
 // Simple rate limiting (in production, use Redis or similar)
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
@@ -39,48 +40,72 @@ const DiagramSchema = z.object({
 
 export const POST: RequestHandler = async ({ request, getClientAddress }) => {
   try {
-    const { prompt } = await request.json();
+    const { prompt, preferMulti } = await request.json();
     
     if (!prompt || typeof prompt !== 'string') {
       return json({ error: 'Invalid prompt' }, { status: 400 });
     }
 
-    // Test-only: fake 429 for long prompts
-    if (env.FAKE_RATE_LIMIT === '1' && typeof prompt === 'string' && prompt.length > MAX_PROMPT) {
-      return new Response(JSON.stringify({ error: 'Prompt too long' }), { 
-        status: 429,
-        headers: { 'Content-Type': 'application/json' }
+    const useIntel = env.INTEL_PLANNER === 'true';
+    if (!useIntel) {
+      // Legacy path - use existing logic
+      return await legacyGenerate(request, getClientAddress, prompt);
+    }
+
+    // Intel planner path
+    try {
+      const spec = await extractSpec(prompt);
+      const out = preferMulti ? planAllLevels(spec) : [plan(spec)];
+      
+      // Return first option's diagram (or all, if you want)
+      return json({ 
+        diagrams: out.map(o => o.data), 
+        meta: out.map(({level,rationale}) => ({level,rationale})) 
       });
+    } catch (err) {
+      // Graceful fallback to legacy on parse/LLM failure
+      console.error('intel-planner failed, falling back to legacy:', err);
+      return await legacyGenerate(request, getClientAddress, prompt);
     }
 
-    const OPENAI_API_KEY = env.OPENAI_API_KEY;
-    if (!OPENAI_API_KEY) {
-      console.warn('OpenAI API key not configured, returning mock data');
-      return json(exampleDiagramData);
-    }
-
-    // Rate limiting
-    const clientId = getClientAddress();
-    const now = Date.now();
-    const clientData = requestCounts.get(clientId);
-    
-    console.log(`[Rate Limit] Client ${clientId}: ${clientData ? `${clientData.count}/${RATE_LIMIT} requests` : 'new client'}`);
-    
-    if (clientData && now < clientData.resetTime) {
-      if (clientData.count >= RATE_LIMIT) {
-        console.log(`[Rate Limit] Client ${clientId}: RATE LIMITED - ${clientData.count}/${RATE_LIMIT} requests`);
-        return json({ 
-          error: 'Rate limit exceeded. Please wait a minute before trying again.' 
-        }, { status: 429 });
+    // Legacy generate function (extracted from original logic)
+    async function legacyGenerate(request: Request, getClientAddress: () => string, prompt: string) {
+      // Test-only: fake 429 for long prompts
+      if (env.FAKE_RATE_LIMIT === '1' && typeof prompt === 'string' && prompt.length > MAX_PROMPT) {
+        return new Response(JSON.stringify({ error: 'Prompt too long' }), { 
+          status: 429,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
-      clientData.count++;
-      console.log(`[Rate Limit] Client ${clientId}: ${clientData.count}/${RATE_LIMIT} requests`);
-    } else {
-      requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-      console.log(`[Rate Limit] Client ${clientId}: 1/${RATE_LIMIT} requests (window resets at ${new Date(now + RATE_LIMIT_WINDOW).toLocaleTimeString()})`);
-    }
 
-    const systemPrompt = `You are a UI-schema generator that creates architecture diagrams. 
+      const OPENAI_API_KEY = env.OPENAI_API_KEY;
+      if (!OPENAI_API_KEY) {
+        console.warn('OpenAI API key not configured, returning mock data');
+        return json(exampleDiagramData);
+      }
+
+      // Rate limiting
+      const clientId = getClientAddress();
+      const now = Date.now();
+      const clientData = requestCounts.get(clientId);
+      
+      console.log(`[Rate Limit] Client ${clientId}: ${clientData ? `${clientData.count}/${RATE_LIMIT} requests` : 'new client'}`);
+      
+      if (clientData && now < clientData.resetTime) {
+        if (clientData.count >= RATE_LIMIT) {
+          console.log(`[Rate Limit] Client ${clientId}: RATE LIMITED - ${clientData.count}/${RATE_LIMIT} requests`);
+          return json({ 
+            error: 'Rate limit exceeded. Please wait a minute before trying again.' 
+          }, { status: 429 });
+        }
+        clientData.count++;
+        console.log(`[Rate Limit] Client ${clientId}: ${clientData.count}/${RATE_LIMIT} requests`);
+      } else {
+        requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+        console.log(`[Rate Limit] Client ${clientId}: 1/${RATE_LIMIT} requests (window resets at ${new Date(now + RATE_LIMIT_WINDOW).toLocaleTimeString()})`);
+      }
+
+      const systemPrompt = `You are a UI-schema generator that creates architecture diagrams. 
 Output ONLY valid JSON in the following format, with no additional text or formatting:
 
 {
@@ -117,81 +142,82 @@ Guidelines (not strict rules):
 - Keep it simple: 3-8 nodes maximum
 - Ensure all JSON is properly formatted with no trailing commas`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 500,
-        temperature: 0.1, // Lower temperature for more consistent JSON
-      }),
-    });
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-3.5-turbo',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: 500,
+          temperature: 0.1, // Lower temperature for more consistent JSON
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API error:', response.status, response.statusText, errorText);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('OpenAI API error:', response.status, response.statusText, errorText);
+        
+        if (response.status === 429) {
+          return json({ 
+            error: 'OpenAI rate limit exceeded. Please wait a few minutes and try again.' 
+          }, { status: 429 });
+        }
+        
+        // Fallback to mock data on OpenAI failure
+        console.warn('OpenAI failed, returning mock data');
+        return json(exampleDiagramData);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content;
       
-      if (response.status === 429) {
-        return json({ 
-          error: 'OpenAI rate limit exceeded. Please wait a few minutes and try again.' 
-        }, { status: 429 });
+      if (!content) {
+        console.warn('No content from OpenAI, returning mock data');
+        return json(exampleDiagramData);
+      }
+
+      // Extract JSON from the response (remove any markdown formatting)
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.error('No JSON found in response:', content);
+        console.warn('Returning mock data as fallback');
+        return json(exampleDiagramData);
+      }
+
+      let diagramData;
+      try {
+        // Clean the JSON string before parsing
+        const jsonString = jsonMatch[0]
+          .replace(/,\s*}/g, '}') // Remove trailing commas
+          .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
+          .replace(/\n/g, '') // Remove newlines
+          .replace(/\r/g, ''); // Remove carriage returns
+        
+        diagramData = JSON.parse(jsonString);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        console.error('Raw content:', content);
+        console.error('Extracted JSON:', jsonMatch[0]);
+        console.warn('Returning mock data as fallback');
+        return json(exampleDiagramData);
       }
       
-      // Fallback to mock data on OpenAI failure
-      console.warn('OpenAI failed, returning mock data');
-      return json(exampleDiagramData);
-    }
-
-    const data = await response.json();
-    const content = data.choices[0]?.message?.content;
-    
-    if (!content) {
-      console.warn('No content from OpenAI, returning mock data');
-      return json(exampleDiagramData);
-    }
-
-    // Extract JSON from the response (remove any markdown formatting)
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.error('No JSON found in response:', content);
-      console.warn('Returning mock data as fallback');
-      return json(exampleDiagramData);
-    }
-
-    let diagramData;
-    try {
-      // Clean the JSON string before parsing
-      const jsonString = jsonMatch[0]
-        .replace(/,\s*}/g, '}') // Remove trailing commas
-        .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
-        .replace(/\n/g, '') // Remove newlines
-        .replace(/\r/g, ''); // Remove carriage returns
-      
-      diagramData = JSON.parse(jsonString);
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      console.error('Raw content:', content);
-      console.error('Extracted JSON:', jsonMatch[0]);
-      console.warn('Returning mock data as fallback');
-      return json(exampleDiagramData);
-    }
-    
-    // Validate with Zod schema
-    try {
-      const validatedData = DiagramSchema.parse(diagramData);
-      return json(validatedData);
-    } catch (validationError) {
-      console.error('Zod validation error:', validationError);
-      console.error('Diagram data:', diagramData);
-      console.warn('Returning mock data as fallback');
-      return json(exampleDiagramData);
+      // Validate with Zod schema
+      try {
+        const validatedData = DiagramSchema.parse(diagramData);
+        return json(validatedData);
+      } catch (validationError) {
+        console.error('Zod validation error:', validationError);
+        console.error('Diagram data:', diagramData);
+        console.warn('Returning mock data as fallback');
+        return json(exampleDiagramData);
+      }
     }
   } catch (error) {
     console.error('Generate API error:', error);

@@ -6,6 +6,7 @@
 	import { promptInput } from './stores/promptInput.js';
 	import RateLimitDebug from './components/RateLimitDebug.svelte';
 	import Spinner from './components/Spinner.svelte';
+	import { genMode, setGenMode } from './stores/modeStore';
 	
 	const dispatch = createEventDispatcher();
 	
@@ -30,9 +31,14 @@
 
 	// Auto-resize textarea
 	$effect(() => {
-		if (textarea && prompt) {
+		if (textarea) {
 			textarea.style.height = 'auto';
-			textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px'; // up to 6 lines
+			if (prompt) {
+				textarea.style.height = Math.min(textarea.scrollHeight, 160) + 'px'; // up to 6 lines
+			} else {
+				// Reset to minimum height when prompt is empty
+				textarea.style.height = '56px'; // min-h-[56px]
+			}
 		}
 	});
 
@@ -47,9 +53,23 @@
 
 		try {
 			console.log('Generating diagram for prompt:', text);
-			const diagramData = await diagramApi.generateDiagram({ prompt: text });
+			const diagramData = await diagramApi.generateDiagram({ 
+				prompt: text, 
+				preferMulti: $genMode === 'smart'
+			});
 			console.log('Received diagram data:', diagramData);
-			diagramStore.set(diagramData);
+			
+			// Handle both legacy and intel planner responses
+			if (diagramData.diagrams && diagramData.meta) {
+				// Intel planner response - use first diagram
+				diagramStore.set(diagramData.diagrams[0]);
+				console.log('Intel planner rationale:', diagramData.meta[0].rationale);
+			} else if (diagramData.nodes && diagramData.edges) {
+				// Legacy response
+				diagramStore.set({ nodes: diagramData.nodes, edges: diagramData.edges });
+			} else {
+				throw new Error('Invalid response format');
+			}
 			
 			// Save to history after successful generation
 			promptHistory.add(text);
@@ -80,7 +100,7 @@
 </script>
 
 <!-- The positioning is now handled by the parent layout -->
-<div class="bg-white/70 dark:bg-gray-900/70 backdrop-blur rounded-xl px-4 py-3 flex gap-2 border border-gray-200 dark:border-gray-700">
+<div class="bg-white/70 dark:bg-gray-900/70 backdrop-blur rounded-xl px-4 py-3 flex gap-2 border border-gray-200 dark:border-gray-700 items-center">
 		<textarea
 			bind:this={textarea}
 			bind:value={prompt}
@@ -107,6 +127,26 @@
 					<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 10.5 12 3m0 0 7.5 7.5M12 3v18" />
 				</svg>
 			{/if}
+		</button>
+		
+		<!-- Mode Toggle -->
+		<button
+			type="button"
+			class="w-14 h-14 flex flex-col items-center justify-center text-xs rounded-lg transition-colors border self-center {$genMode === 'smart'
+				? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/20 dark:border-emerald-700 dark:text-emerald-300' 
+				: 'bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-400'}"
+			onclick={() => {
+				console.log('Mode toggle clicked, current mode:', $genMode);
+				setGenMode($genMode === 'smart' ? 'legacy' : 'smart');
+			}}
+			title={$genMode === 'smart' ? 'Switch to Legacy Mode' : 'Switch to Intelligent Mode'}
+		>
+			{#if $genMode === 'smart'}
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4 mb-1">
+					<path stroke-linecap="round" stroke-linejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+				</svg>
+			{/if}
+			{$genMode === 'smart' ? 'Smart' : 'Legacy'}
 		</button>
 </div>
 

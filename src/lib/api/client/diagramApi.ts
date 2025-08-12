@@ -2,11 +2,18 @@ import type { DiagramData } from '../../types/diagram.js';
 
 export interface GenerateRequest {
   prompt: string;
+  preferMulti?: boolean;
 }
 
 export interface GenerateResponse {
-  nodes: DiagramData['nodes'];
-  edges: DiagramData['edges'];
+  nodes?: DiagramData['nodes'];
+  edges?: DiagramData['edges'];
+  // Intel planner response format
+  diagrams?: DiagramData[];
+  meta?: Array<{
+    level: string;
+    rationale: string[];
+  }>;
 }
 
 export class DiagramApiClient {
