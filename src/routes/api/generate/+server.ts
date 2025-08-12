@@ -5,6 +5,82 @@ import { env } from '$env/dynamic/private';
 import exampleDiagramData from '$lib/diagram/example-diagram.json' with { type: "json" };
 import { extractSpec, plan, planAllLevels } from '$lib/intel';
 
+// --- Configuration ---
+const MODEL = env.OPENAI_MODEL ?? 'gpt-4o-mini'; // keep 'gpt-3.5-turbo' if you must
+const MAX_TOKENS_DEFAULT = Number(env.OPENAI_MAX_TOKENS ?? 1500);
+const MAX_TOKENS_RETRY_CAP = Number(env.OPENAI_MAX_TOKENS_CAP ?? 3000);
+
+// small helper to call OpenAI and parse JSON
+async function callOpenAIJson(params: {
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+  max_tokens: number;
+}) {
+  const { model, systemPrompt, userPrompt, max_tokens } = params;
+
+  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      // keep JSON tight/consistent but still allow some variety
+      temperature: 0.2,
+      max_tokens,
+      // json mode helps produce clean JSON with 4o/4o-mini; harmless if ignored
+      response_format: { type: 'json_object' }
+    })
+  });
+
+  const data = await resp.json().catch(() => ({}));
+  const choice = data?.choices?.[0];
+  const content: string | undefined = choice?.message?.content;
+  const finish: string | undefined = choice?.finish_reason;
+  const usage = data?.usage;
+
+  console.log('[openai]', { model, max_tokens, finish, usage });
+
+  // try to parse JSON (either exact JSON or extracted with regex fallback)
+  let parsed: any | null = null;
+  let parse_error = false;
+
+  if (content) {
+    let jsonString = content.trim();
+    if (!jsonString.startsWith('{')) {
+      const m = content.match(/\{[\s\S]*\}$/);
+      if (m) jsonString = m[0];
+    }
+    try {
+      // minor cleanup in case of trailing commas/newlines
+      const cleaned = jsonString
+        .replace(/,\s*}/g, '}')
+        .replace(/,\s*]/g, ']')
+        .replace(/\r?\n/g, '');
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      parse_error = true;
+    }
+  }
+
+  return {
+    ok: resp.ok,
+    status: resp.status,
+    text: typeof data === 'string' ? data : undefined,
+    content,
+    parsed,
+    finish,
+    usage,
+    parse_error
+  };
+}
+
 // Simple rate limiting (in production, use Redis or similar)
 const requestCounts = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT = 2; // requests per minute
@@ -105,9 +181,8 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
         console.log(`[Rate Limit] Client ${clientId}: 1/${RATE_LIMIT} requests (window resets at ${new Date(now + RATE_LIMIT_WINDOW).toLocaleTimeString()})`);
       }
 
-      const systemPrompt = `You are a UI-schema generator that creates architecture diagrams. 
-Output ONLY valid JSON in the following format, with no additional text or formatting:
-
+      const systemPrompt = `You are a UI-schema generator that creates architecture diagrams.
+Output ONLY valid JSON in the format below (no prose, no markdown):
 {
   "nodes": [
     {
@@ -116,105 +191,72 @@ Output ONLY valid JSON in the following format, with no additional text or forma
       "label": "Human readable name",
       "x": number,
       "y": number,
-      "width": number (optional, for rectangles),
-      "height": number (optional, for rectangles),
-      "radius": number (optional, for circles),
-      "shape": "rectangle|circle|cylinder|hexagon|diamond|triangle" (optional, for custom shapes)
+      "width": number (optional, rectangles),
+      "height": number (optional, rectangles),
+      "radius": number (optional, circles),
+      "shape": "rectangle|circle|cylinder|hexagon|diamond|triangle" (optional, for custom)
     }
   ],
   "edges": [
-    {
-      "id": "edge_id",
-      "source": "node_id",
-      "target": "node_id", 
-      "label": "Connection description"
-    }
+    { "id": "edge_id", "source": "node_id", "target": "node_id", "label": "Connection description" }
   ]
 }
 
-Guidelines (not strict rules):
-- Use "component" for internal services/apps (typically rectangles)
-- Use "external" for APIs/third-party services (typically circles)
-- Use "datastore" for databases/storage (typically cylinders)
-- Use "custom" with "shape" property for special cases (hexagons for load balancers, diamonds for decision points, etc.)
-- Position nodes logically (x: 100-500, y: 100-400)
-- Create meaningful connections between related components
-- Keep it simple: 3-8 nodes maximum
-- Ensure all JSON is properly formatted with no trailing commas`;
+Guidelines:
+- Use "component" for internal services/apps (rectangles), "external" for 3rd-party APIs (circles),
+  "datastore" for databases/storage (cylinders), and "custom" + "shape" for special roles (load balancer=hexagon).
+- **Node budget**: If the prompt mentions multiple features/subsystems, prefer 6–10 nodes; otherwise 3–6. Never exceed 12.
+- Position nodes roughly within x:[100..900], y:[80..520] to form a left-to-right flow; edges should make sense.
+- Label edges meaningfully (e.g., "API", "CRUD", "Metrics", "HTTPS").
+- Return well-formed JSON only (no comments, no trailing commas).`;
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt }
-          ],
-          max_tokens: 500,
-          temperature: 0.1, // Lower temperature for more consistent JSON
-        }),
+      const first = await callOpenAIJson({
+        model: MODEL,
+        systemPrompt,
+        userPrompt: prompt,
+        max_tokens: MAX_TOKENS_DEFAULT
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('OpenAI API error:', response.status, response.statusText, errorText);
-        
-        if (response.status === 429) {
-          return json({ 
-            error: 'OpenAI rate limit exceeded. Please wait a few minutes and try again.' 
-          }, { status: 429 });
-        }
-        
-        // Fallback to mock data on OpenAI failure
+      // early error cases (rate limit, etc.)
+      if (!first.ok && first.status === 429) {
+        return json({ error: 'OpenAI rate limit exceeded. Please wait a few minutes and try again.' }, { status: 429 });
+      }
+      if (!first.ok) {
+        console.error('OpenAI API error:', first.status, first.text ?? first.content);
         console.warn('OpenAI failed, returning mock data');
         return json(exampleDiagramData);
       }
 
-      const data = await response.json();
-      const content = data.choices[0]?.message?.content;
-      
-      if (!content) {
-        console.warn('No content from OpenAI, returning mock data');
+      // if we got truncated or failed to parse → one retry with more budget
+      let result = first;
+      if (result.finish === 'length' || result.parse_error || !result.parsed) {
+        const retryTokens = Math.min(MAX_TOKENS_DEFAULT * 2, MAX_TOKENS_RETRY_CAP);
+        console.log('[openai] retry with larger max_tokens=', retryTokens);
+
+        const retry = await callOpenAIJson({
+          model: MODEL,
+          systemPrompt,
+          userPrompt: prompt,
+          max_tokens: retryTokens
+        });
+
+        if (retry.ok && retry.parsed) {
+          result = retry;
+        }
+      }
+
+      // still nothing parseable → fallback
+      if (!result.parsed) {
+        console.warn('No parseable JSON after retry; returning mock data');
         return json(exampleDiagramData);
       }
 
-      // Extract JSON from the response (remove any markdown formatting)
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        console.error('No JSON found in response:', content);
-        console.warn('Returning mock data as fallback');
-        return json(exampleDiagramData);
-      }
-
-      let diagramData;
+      // Validate with Zod schema (unchanged)
       try {
-        // Clean the JSON string before parsing
-        const jsonString = jsonMatch[0]
-          .replace(/,\s*}/g, '}') // Remove trailing commas
-          .replace(/,\s*]/g, ']') // Remove trailing commas in arrays
-          .replace(/\n/g, '') // Remove newlines
-          .replace(/\r/g, ''); // Remove carriage returns
-        
-        diagramData = JSON.parse(jsonString);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        console.error('Raw content:', content);
-        console.error('Extracted JSON:', jsonMatch[0]);
-        console.warn('Returning mock data as fallback');
-        return json(exampleDiagramData);
-      }
-      
-      // Validate with Zod schema
-      try {
-        const validatedData = DiagramSchema.parse(diagramData);
+        const validatedData = DiagramSchema.parse(result.parsed);
         return json(validatedData);
       } catch (validationError) {
         console.error('Zod validation error:', validationError);
-        console.error('Diagram data:', diagramData);
         console.warn('Returning mock data as fallback');
         return json(exampleDiagramData);
       }
