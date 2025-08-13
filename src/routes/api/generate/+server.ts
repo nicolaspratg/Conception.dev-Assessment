@@ -81,10 +81,7 @@ async function callOpenAIJson(params: {
   };
 }
 
-// Simple rate limiting (in production, use Redis or similar)
-const requestCounts = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT = 2; // requests per minute
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
+// Rate limiting removed - OpenAI handles their own rate limits
 
 // Test-only: fake rate limit for long prompts
 const MAX_PROMPT = 500;
@@ -160,26 +157,7 @@ export const POST: RequestHandler = async ({ request, getClientAddress }) => {
         return json(exampleDiagramData);
       }
 
-      // Rate limiting
-      const clientId = getClientAddress();
-      const now = Date.now();
-      const clientData = requestCounts.get(clientId);
-      
-      console.log(`[Rate Limit] Client ${clientId}: ${clientData ? `${clientData.count}/${RATE_LIMIT} requests` : 'new client'}`);
-      
-      if (clientData && now < clientData.resetTime) {
-        if (clientData.count >= RATE_LIMIT) {
-          console.log(`[Rate Limit] Client ${clientId}: RATE LIMITED - ${clientData.count}/${RATE_LIMIT} requests`);
-          return json({ 
-            error: 'Rate limit exceeded. Please wait a minute before trying again.' 
-          }, { status: 429 });
-        }
-        clientData.count++;
-        console.log(`[Rate Limit] Client ${clientId}: ${clientData.count}/${RATE_LIMIT} requests`);
-      } else {
-        requestCounts.set(clientId, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-        console.log(`[Rate Limit] Client ${clientId}: 1/${RATE_LIMIT} requests (window resets at ${new Date(now + RATE_LIMIT_WINDOW).toLocaleTimeString()})`);
-      }
+      // Rate limiting removed - OpenAI handles their own rate limits
 
       const systemPrompt = `You are a UI-schema generator that creates architecture diagrams.
 Output ONLY valid JSON in the format below (no prose, no markdown):
