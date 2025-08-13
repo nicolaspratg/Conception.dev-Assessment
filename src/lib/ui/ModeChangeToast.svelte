@@ -19,7 +19,7 @@
   });
 
   $: if (open) {
-    console.log('Toast component: open changed to', open, 'mode:', mode);
+    	// console.log('Toast component: open changed to', open, 'mode:', mode);
     clearTimeout(timer);
     timer = setTimeout(() => onClose(), 6000);
   }

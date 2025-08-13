@@ -45,7 +45,7 @@ async function callOpenAIJson(params: {
   const finish: string | undefined = choice?.finish_reason;
   const usage = data?.usage;
 
-  console.log('[openai]', { model, max_tokens, finish, usage });
+  // console.log('[openai]', { model, max_tokens, finish, usage });
 
   // try to parse JSON (either exact JSON or extracted with regex fallback)
   let parsed: any | null = null;
@@ -209,7 +209,7 @@ Guidelines:
       let result = first;
       if (result.finish === 'length' || result.parse_error || !result.parsed) {
         const retryTokens = Math.min(MAX_TOKENS_DEFAULT * 2, MAX_TOKENS_RETRY_CAP);
-        console.log('[openai] retry with larger max_tokens=', retryTokens);
+        // console.log('[openai] retry with larger max_tokens=', retryTokens);
 
         const retry = await callOpenAIJson({
           model: MODEL,

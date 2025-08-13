@@ -36,13 +36,13 @@
 
 	$effect(() => {
 		const toastState = $genToast;
-		console.log('Toast state changed:', toastState);
+		// console.log('Toast state changed:', toastState);
 		open = toastState.open; 
 		mode = toastState.mode;
 	});
 
 	function closeToast() {
-		console.log('Closing toast');
+		// console.log('Closing toast');
 		genToast.set({ open: false, mode });
 	}
 </script>

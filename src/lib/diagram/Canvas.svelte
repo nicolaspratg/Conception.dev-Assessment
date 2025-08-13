@@ -41,7 +41,7 @@
     // Use requestAnimationFrame to ensure DOM is ready
     requestAnimationFrame(() => {
       if (!hasInteracted && !initialFitDone) {
-        console.log('[Canvas] Auto-fitting diagram with', layoutData.nodes.length, 'nodes');
+        // console.log('[Canvas] Auto-fitting diagram with', layoutData.nodes.length, 'nodes');
         fitToScreen();
         initialFitDone = true;
         svgReady = true;

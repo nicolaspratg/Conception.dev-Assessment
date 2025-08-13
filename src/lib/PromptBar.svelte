@@ -13,8 +13,6 @@
 	let prompt = $state('');
 	let loading = $state(false);
 	let showToast = $state(false);
-	let showErrorToast = $state(false);
-	let errorMessage = $state('');
 	let textarea: HTMLTextAreaElement;
 	let debugComponent: RateLimitDebug;
 	
@@ -88,15 +86,6 @@
 			// Log failed request
 			debugComponent?.logRequest(text, false);
 			// Don't clear the prompt on error so user can try again
-			
-			// Check if it's an OpenAI rate limit error
-			if (err instanceof Error && err.message.includes('OpenAI rate limit')) {
-				errorMessage = 'OpenAI rate limit exceeded. Please wait a few minutes and try again.';
-			} else {
-				errorMessage = err instanceof Error ? err.message : 'Failed to generate diagram';
-			}
-			showErrorToast = true;
-			setTimeout(() => (showErrorToast = false), 5000); // Show error for 5 seconds
 		} finally {
 			loading = false;
 		}
@@ -165,13 +154,6 @@
 	<div class="fixed bottom-24 right-6 bg-emerald-600 text-white
 			   px-3 py-2 rounded shadow z-50 animate-fade-in">
 		Diagram generated successfully!
-	</div>
-{/if}
-
-{#if showErrorToast}
-	<div class="fixed bottom-24 right-6 bg-red-600 text-white
-			   px-3 py-2 rounded shadow z-50 animate-fade-in max-w-sm">
-		{errorMessage}
 	</div>
 {/if}
 

@@ -16,17 +16,17 @@ function createModeStore() {
   if (typeof window !== 'undefined') {
     setTimeout(() => {
       hydrated = true;
-      console.log('Store hydrated, ready to show toasts');
+      	// console.log('Store hydrated, ready to show toasts');
     }, 100);
   }
 
   _mode.subscribe((m) => {
     if (typeof localStorage !== 'undefined') localStorage.setItem('genMode', m);
     if (!hydrated) { 
-      console.log('Store not hydrated yet, skipping toast');
+      		// console.log('Store not hydrated yet, skipping toast');
       return; // don't show on initial render
     }
-    console.log('Mode changed to:', m, 'showing toast');
+    	// console.log('Mode changed to:', m, 'showing toast');
     _shouldShowToast.set({ open: true, mode: m });
   });
 
