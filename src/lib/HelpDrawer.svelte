@@ -54,9 +54,6 @@
             Type a prompt at the bottom to generate an architecture mock-up. You can pan/zoom the canvas with your mouse or the buttons on the right.
           </p>
           <p class="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
-            Use the <strong>Smart</strong> mode for intelligent multi-level planning, or <strong>Legacy</strong> mode for simple single-diagram generation. Toggle between modes using the button next to the generate button.
-          </p>
-          <p class="mt-2 text-sm leading-6 text-gray-700 dark:text-gray-300">
             Need ideas or want to reuse something you tried? Open the left drawer to see <strong>Example prompts</strong> and your <strong>Past prompts</strong>.
           </p>
         </div>
