@@ -19,6 +19,7 @@
   let isFixedBar = false;
 
   function measurePromptBar() {
+    if (typeof document === 'undefined') return;
     const el = document.getElementById('prompt-bar');
     const h = el ? Math.ceil(el.getBoundingClientRect().height) : 0;
     if (h !== promptBarHeight) promptBarHeight = h;
@@ -44,6 +45,7 @@
 
   // Check if prompt bar is fixed (desktop layout)
   function checkIsFixedBar() {
+    if (typeof window === 'undefined') return;
     isFixedBar = window.matchMedia('(min-width: 640px)').matches;
   }
 

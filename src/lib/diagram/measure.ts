@@ -4,6 +4,12 @@ let textEl: SVGTextElement | null = null;
 
 function ensureSVG() {
   if (svg) return;
+  
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return;
+  }
+  
   svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '0');
   svg.setAttribute('height', '0');
@@ -23,7 +29,11 @@ function ensureSVG() {
 
 export function measureText(txt: string, fontSize = 14, maxWidth = 320) {
   ensureSVG();
-  if (!textEl) return { width: 0, height: 0, lines: 1 };
+  if (!textEl || typeof window === 'undefined') {
+    // Fallback for SSR - estimate based on character count
+    const estimatedWidth = Math.min(txt.length * 8, maxWidth);
+    return { width: estimatedWidth, height: fontSize * 1.3, lines: 1 };
+  }
 
   textEl.setAttribute('font-size', String(fontSize));
 
