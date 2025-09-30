@@ -45,7 +45,7 @@ export async function extractSpec(userText: string): Promise<ExtractSpec> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o-mini',
+      model: 'gpt-5',
       temperature: 0,
       response_format: { type: 'json_object' },
       messages: [
