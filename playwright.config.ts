@@ -6,6 +6,7 @@ process.env.FAKE_RATE_LIMIT = '1';
 
 export default defineConfig({
   testDir: './tests',
+  testIgnore: ['**/unit/**', '**/api/**', '**/audit/schema.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
