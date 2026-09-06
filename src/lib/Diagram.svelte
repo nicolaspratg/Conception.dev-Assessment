@@ -4,7 +4,10 @@
   import { onMount, onDestroy } from 'svelte';
   import Canvas from './diagram/Canvas.svelte';
   import Toolbar from './diagram/Toolbar.svelte';
+  import NodeDetailsPanel from './diagram/NodeDetailsPanel.svelte';
   import type { DiagramData } from './types/diagram';
+
+  let selectedNodeId: string | null = null;
 
   // Measurement gating for initial fit
   let promptBarHeight = 0;
@@ -89,17 +92,31 @@
             bg-[radial-gradient(circle_at_1px_1px,rgb(156_163_175)_1px,transparent_0)] 
             dark:bg-[radial-gradient(circle_at_1px_1px,rgb(75_85_99)_1px,transparent_0)] 
             bg-[size:18px_18px] touch-none">
-  <Canvas 
+  <Canvas
     bind:this={canvasRef}
     nodes={data.nodes}
     edges={data.edges}
     {containerWidth}
     {containerHeight}
+    bind:selectedNodeId
   />
-  
-  <Toolbar 
+
+  <Toolbar
     onZoomIn={() => canvasRef?.zoomIn()}
     onZoomOut={() => canvasRef?.zoomOut()}
     onReset={() => canvasRef?.resetView()}
   />
+
+  {#if selectedNodeId}
+    {@const selectedNode = data.nodes.find((n) => n.id === selectedNodeId)}
+    {#if selectedNode}
+      <NodeDetailsPanel
+        node={selectedNode}
+        nodes={data.nodes}
+        edges={data.edges}
+        onClose={() => (selectedNodeId = null)}
+        onFocusNode={(id) => { selectedNodeId = id; canvasRef?.focusNode(id); }}
+      />
+    {/if}
+  {/if}
 </div> 
