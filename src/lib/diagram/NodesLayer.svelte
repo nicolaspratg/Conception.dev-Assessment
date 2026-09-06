@@ -3,14 +3,60 @@
   import { uiScale } from '../uiScale';
 
   export let nodes: Node[] = [];
-  
+  export let selectedNodeId: string | null = null;
+  export let matchedNodeIds: Set<string> | null = null;
+  export let draggingNodeId: string | null = null;
+
   // Get the current UI scale factor
   const s = uiScale();
+
+  // Approximate bounding box per node type, used to draw the selection/match ring.
+  // Mirrors each shape branch's own coordinate convention below.
+  function nodeBounds(node: Node) {
+    if (node.type === 'external') {
+      const d = (node.radius ?? 50) * 2;
+      return { x: node.x - d / 2, y: node.y - d / 2, w: d, h: d, rx: d / 2 };
+    }
+    if (node.type === 'custom') {
+      const w = node.width ?? (node.shape ? 100 : 150);
+      const h = node.height ?? (node.shape ? 60 : 80);
+      return { x: node.x, y: node.y, w, h, rx: 4 };
+    }
+    const w = node.width ?? (node.type === 'datastore' ? 120 : 150);
+    const h = node.height ?? 80;
+    return { x: node.x - w / 2, y: node.y - h / 2, w, h, rx: 4 };
+  }
+
+  function isMatched(node: Node) {
+    return matchedNodeIds != null && matchedNodeIds.has(node.id);
+  }
+  function isDimmed(node: Node) {
+    return matchedNodeIds != null && !isMatched(node) && node.id !== selectedNodeId;
+  }
 </script>
 
 <!-- NODES -->
 <g id="nodes">
   {#each nodes as node}
+  <g
+    data-node-id={node.id}
+    style="opacity: {isDimmed(node) ? 0.28 : 1}; cursor: {draggingNodeId === node.id ? 'grabbing' : 'grab'};"
+  >
+    {#if node.id === selectedNodeId || isMatched(node)}
+      {@const b = nodeBounds(node)}
+      <rect
+        x={b.x - 6}
+        y={b.y - 6}
+        width={b.w + 12}
+        height={b.h + 12}
+        rx={b.rx + 6}
+        fill="none"
+        stroke={node.id === selectedNodeId ? 'rgb(59 130 246)' : 'rgb(245 158 11)'}
+        stroke-width="3"
+        stroke-dasharray={node.id === selectedNodeId ? undefined : '6 4'}
+        class="pointer-events-none"
+      />
+    {/if}
     {#if node.type === 'component'}
       <!-- Rectangle for components -->
       <rect
@@ -200,5 +246,6 @@
         </text>
       {/if}
     {/if}
+  </g>
   {/each}
 </g>

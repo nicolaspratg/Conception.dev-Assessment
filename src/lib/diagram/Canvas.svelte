@@ -11,6 +11,8 @@
   export let edges: Edge[] = [];
   export let containerWidth = 1000;
   export let containerHeight = 600;
+  export let selectedNodeId: string | null = null;
+  export let matchedNodeIds: Set<string> | null = null;
 
 
   // State
@@ -21,6 +23,13 @@
   let initialFitDone = false;
   let svgReady = false;
   const SCALE_MIN = 0.05, SCALE_MAX = 3;
+
+  // Manual node position overrides from dragging, keyed by node id.
+  // Layered on top of dagre's output rather than fighting the reactive re-layout.
+  let dragOverrides: Record<string, { x: number; y: number }> = {};
+  let draggingNodeId: string | null = null;
+  let dragMoved = false;
+  let prevNodesRef: Node[] | null = null;
   
   // UI inset measurements
   let insets: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -35,7 +44,27 @@
   // Layout computation
   $: layoutResult = computeLayout({ nodes, edges });
   $: layoutData = layoutResult;
-  
+
+  // New diagram data (not just a re-render) resets manual drag positions and selection.
+  $: if (nodes !== prevNodesRef) {
+    prevNodesRef = nodes;
+    dragOverrides = {};
+    selectedNodeId = null;
+  }
+
+  // Dragged nodes override dagre's computed position; edges touching a dragged
+  // node fall back to a straight line since dagre's routed path no longer applies.
+  $: displayNodes = layoutData.nodes.map((n) =>
+    dragOverrides[n.id] ? { ...n, x: dragOverrides[n.id].x, y: dragOverrides[n.id].y } : n
+  );
+  $: displayEdges = layoutData.edges.map((e) => {
+    if (!dragOverrides[e.source] && !dragOverrides[e.target]) return e;
+    const s = displayNodes.find((n) => n.id === e.source);
+    const t = displayNodes.find((n) => n.id === e.target);
+    if (!s || !t) return e;
+    return { ...e, points: [{ x: s.x, y: s.y }, { x: t.x, y: t.y }], labelX: (s.x + t.x) / 2, labelY: (s.y + t.y) / 2 };
+  });
+
   // Auto-fit when new data arrives and we haven't interacted yet
   $: if (layoutData?.nodes?.length && !hasInteracted && insetsReady && svgElement && !initialFitDone) {
     // Use requestAnimationFrame to ensure DOM is ready
@@ -151,16 +180,46 @@
   // pan (mouse & touch)
   let dragging = false, lastX = 0, lastY = 0, pointers = new Map<number,{x:number,y:number}>();
 
+  function nodeIdFromEvent(e: PointerEvent): string | null {
+    const el = (e.target as Element)?.closest?.('[data-node-id]');
+    return el ? el.getAttribute('data-node-id') : null;
+  }
+
   function onPointerDown(e: PointerEvent) {
     (e.target as Element).setPointerCapture(e.pointerId);
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.size === 1) { dragging = true; lastX = e.clientX; lastY = e.clientY; }
     hasInteracted = true;
+
+    if (pointers.size === 1) {
+      const nodeId = nodeIdFromEvent(e);
+      if (nodeId) {
+        draggingNodeId = nodeId;
+        dragMoved = false;
+        lastX = e.clientX; lastY = e.clientY;
+        return;
+      }
+      dragging = true; lastX = e.clientX; lastY = e.clientY;
+    }
   }
-  
+
   function onPointerMove(e: PointerEvent) {
     const prev = pointers.get(e.pointerId);
     if (prev) pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (draggingNodeId) {
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragMoved = true;
+      lastX = e.clientX; lastY = e.clientY;
+      const current = displayNodes.find((n) => n.id === draggingNodeId);
+      if (current) {
+        dragOverrides = {
+          ...dragOverrides,
+          [draggingNodeId]: { x: current.x + dx / scale, y: current.y + dy / scale }
+        };
+      }
+      return;
+    }
 
     // pinch zoom when 2 pointers
     if (pointers.size === 2) {
@@ -182,9 +241,16 @@
       lastX = e.clientX; lastY = e.clientY;
     }
   }
-  
+
   function onPointerUp(e: PointerEvent) {
     pointers.delete(e.pointerId);
+    if (draggingNodeId) {
+      if (!dragMoved) {
+        selectedNodeId = selectedNodeId === draggingNodeId ? null : draggingNodeId;
+      }
+      draggingNodeId = null;
+      dragMoved = false;
+    }
     if (pointers.size === 0) dragging = false;
   }
 
@@ -217,6 +283,18 @@
       hasInteracted = false;
       initialFitDone = true; // Prevent reactive auto-fit from triggering
     }, 300); // Match animation duration
+  }
+
+  // Pan (keeping current zoom level) so the given node is centered — used by search.
+  export function focusNode(id: string) {
+    if (!svgElement) return;
+    const n = displayNodes.find((n) => n.id === id);
+    if (!n) return;
+    hasInteracted = true;
+    const { cx, cy } = visibleCenterLocal(svgElement, insets);
+    const targetPanX = cx - scale * n.x;
+    const targetPanY = cy - scale * n.y;
+    smoothZoomTo(0, 0, 1, targetPanX, targetPanY, scale);
   }
 
   // Smooth zoom animation function
@@ -323,7 +401,12 @@
       <rect x="0" y="0" width="100%" height="100%" fill="transparent" />
       
       <Defs />
-      <EdgesLayer edges={layoutData.edges} nodes={layoutData.nodes} />
-      <NodesLayer nodes={layoutData.nodes} />
+      <EdgesLayer edges={displayEdges} nodes={displayNodes} />
+      <NodesLayer
+        nodes={displayNodes}
+        {selectedNodeId}
+        {matchedNodeIds}
+        {draggingNodeId}
+      />
     </g>
   </svg>
