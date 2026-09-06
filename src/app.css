@@ -22,6 +22,8 @@ html, body {
 /* Hide scrollbars on the main app container */
 .h-screen {
   overflow: hidden;
+  height: 100vh; /* fallback for browsers without dvh support */
+  height: 100dvh;
 }
 
 /* Hide scrollbars globally for the app */
@@ -61,7 +63,8 @@ html, body {
 
 /* Ensure proper height calculations */
 #svelte {
-  height: 100vh;
+  height: 100vh; /* fallback for browsers without dvh support */
+  height: 100dvh;
   display: flex;
   flex-direction: column;
 }
