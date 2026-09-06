@@ -4,7 +4,12 @@
   import { onMount, onDestroy } from 'svelte';
   import Canvas from './diagram/Canvas.svelte';
   import Toolbar from './diagram/Toolbar.svelte';
+  import NodeDetailsPanel from './diagram/NodeDetailsPanel.svelte';
+  import SearchBox from './diagram/SearchBox.svelte';
   import type { DiagramData } from './types/diagram';
+
+  let selectedNodeId: string | null = null;
+  let searchQuery = '';
 
   // Measurement gating for initial fit
   let promptBarHeight = 0;
@@ -83,23 +88,56 @@
   });
 
   $: data = $diagramStore;
+
+  $: matchedNodeIds = searchQuery.trim()
+    ? new Set(
+        data.nodes
+          .filter((n) => n.label.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+          .map((n) => n.id)
+      )
+    : null;
+  $: matchCount = matchedNodeIds?.size ?? 0;
+
+  function focusFirstMatch() {
+    if (!matchedNodeIds || matchedNodeIds.size === 0) return;
+    const id = matchedNodeIds.values().next().value as string;
+    selectedNodeId = id;
+    canvasRef?.focusNode(id);
+  }
 </script>
 
 <div class="h-full w-full bg-gray-100 dark:bg-gray-900 
             bg-[radial-gradient(circle_at_1px_1px,rgb(156_163_175)_1px,transparent_0)] 
             dark:bg-[radial-gradient(circle_at_1px_1px,rgb(75_85_99)_1px,transparent_0)] 
             bg-[size:18px_18px] touch-none">
-  <Canvas 
+  <Canvas
     bind:this={canvasRef}
     nodes={data.nodes}
     edges={data.edges}
     {containerWidth}
     {containerHeight}
+    bind:selectedNodeId
+    {matchedNodeIds}
   />
-  
-  <Toolbar 
+
+  <Toolbar
     onZoomIn={() => canvasRef?.zoomIn()}
     onZoomOut={() => canvasRef?.zoomOut()}
     onReset={() => canvasRef?.resetView()}
   />
+
+  <SearchBox bind:value={searchQuery} {matchCount} onSubmit={focusFirstMatch} />
+
+  {#if selectedNodeId}
+    {@const selectedNode = data.nodes.find((n) => n.id === selectedNodeId)}
+    {#if selectedNode}
+      <NodeDetailsPanel
+        node={selectedNode}
+        nodes={data.nodes}
+        edges={data.edges}
+        onClose={() => (selectedNodeId = null)}
+        onFocusNode={(id) => { selectedNodeId = id; canvasRef?.focusNode(id); }}
+      />
+    {/if}
+  {/if}
 </div> 
