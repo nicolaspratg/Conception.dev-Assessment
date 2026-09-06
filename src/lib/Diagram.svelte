@@ -5,9 +5,11 @@
   import Canvas from './diagram/Canvas.svelte';
   import Toolbar from './diagram/Toolbar.svelte';
   import NodeDetailsPanel from './diagram/NodeDetailsPanel.svelte';
+  import SearchBox from './diagram/SearchBox.svelte';
   import type { DiagramData } from './types/diagram';
 
   let selectedNodeId: string | null = null;
+  let searchQuery = '';
 
   // Measurement gating for initial fit
   let promptBarHeight = 0;
@@ -86,6 +88,22 @@
   });
 
   $: data = $diagramStore;
+
+  $: matchedNodeIds = searchQuery.trim()
+    ? new Set(
+        data.nodes
+          .filter((n) => n.label.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+          .map((n) => n.id)
+      )
+    : null;
+  $: matchCount = matchedNodeIds?.size ?? 0;
+
+  function focusFirstMatch() {
+    if (!matchedNodeIds || matchedNodeIds.size === 0) return;
+    const id = matchedNodeIds.values().next().value as string;
+    selectedNodeId = id;
+    canvasRef?.focusNode(id);
+  }
 </script>
 
 <div class="h-full w-full bg-gray-100 dark:bg-gray-900 
@@ -99,6 +117,7 @@
     {containerWidth}
     {containerHeight}
     bind:selectedNodeId
+    {matchedNodeIds}
   />
 
   <Toolbar
@@ -106,6 +125,8 @@
     onZoomOut={() => canvasRef?.zoomOut()}
     onReset={() => canvasRef?.resetView()}
   />
+
+  <SearchBox bind:value={searchQuery} {matchCount} onSubmit={focusFirstMatch} />
 
   {#if selectedNodeId}
     {@const selectedNode = data.nodes.find((n) => n.id === selectedNodeId)}
